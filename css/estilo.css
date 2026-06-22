@@ -143,10 +143,18 @@ body {
   box-shadow: 0 2px 10px rgba(0,0,0,0.06);
 }
 
-.cartao-login .logo-login {
-  height: 52px;
-  display: block;
+.logo-login-wrap {
+  background: var(--azul-escuro);
+  border-radius: var(--raio);
+  padding: 14px 20px;
+  display: flex;
+  justify-content: center;
   margin: 0 auto 1.25rem;
+}
+
+.cartao-login .logo-login {
+  height: 44px;
+  display: block;
 }
 
 .cartao-login h2 {
