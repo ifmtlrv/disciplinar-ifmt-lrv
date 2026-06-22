@@ -70,6 +70,7 @@ fizer sentido). Para aprovar alguém que se cadastrou:
 
 ```
 index.html              página principal
+assets/logo-ifmt.png      logomarca oficial do IFMT
 css/estilo.css           estilos visuais
 js/config.js              suas credenciais do Supabase (preencher)
 js/regras.js              base de regras da Resolução 113/2025 (incisos, níveis, cursos)
