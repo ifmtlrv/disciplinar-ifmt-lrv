@@ -117,7 +117,8 @@
             <div class="linha-form">
               <div>
                 <label for="f-curso">Curso</label>
-                <select id="f-curso"></select>
+                <input type="text" id="f-curso" list="lista-cursos" placeholder="Digite para buscar o curso..." autocomplete="off">
+                <datalist id="lista-cursos"></datalist>
               </div>
               <div>
                 <label for="f-data">Data da falta</label>
@@ -125,7 +126,9 @@
               </div>
             </div>
             <label for="f-inciso">Inciso do Art. 11 infringido</label>
-            <select id="f-inciso"></select>
+            <input type="text" id="f-inciso-busca" list="lista-incisos" placeholder="Digite o número do inciso ou palavras da descrição..." autocomplete="off">
+            <datalist id="lista-incisos"></datalist>
+            <input type="hidden" id="f-inciso">
             <div id="f-nivel-preview"></div>
             <label for="f-desc">Descrição objetiva da ocorrência</label>
             <textarea id="f-desc" rows="3" placeholder="Descreva circunstâncias, envolvidos, relato de presentes..."></textarea>
@@ -175,7 +178,7 @@
           <div class="linha-form">
             <div>
               <label for="edit-curso">Curso</label>
-              <select id="edit-curso"></select>
+              <input type="text" id="edit-curso" list="lista-cursos" placeholder="Digite para buscar o curso..." autocomplete="off">
             </div>
             <div>
               <label for="edit-data">Data da falta</label>
@@ -183,7 +186,8 @@
             </div>
           </div>
           <label for="edit-inciso">Inciso do Art. 11 infringido</label>
-          <select id="edit-inciso"></select>
+          <input type="text" id="edit-inciso-busca" list="lista-incisos" placeholder="Digite o número do inciso ou palavras da descrição..." autocomplete="off">
+          <input type="hidden" id="edit-inciso">
           <label for="edit-desc">Descrição objetiva da ocorrência</label>
           <textarea id="edit-desc" rows="3"></textarea>
           <label for="edit-menor">Menor de idade?</label>
@@ -233,6 +237,53 @@
         </div>
       </div>
 
+      <!-- Modal de notificação de medida disciplinar -->
+      <div id="modal-notificacao" class="modal-overlay" style="display:none;">
+        <div class="modal-card" style="max-width:680px;">
+          <h3>Gerar notificação de medida disciplinar</h3>
+          <p class="muted" style="font-size:13px; margin-bottom:14px;">Revise e ajuste o texto sugerido antes de baixar o documento. O número da notificação deve ser preenchido manualmente.</p>
+
+          <div class="linha-form">
+            <div>
+              <label for="not-numero">Número da notificação</label>
+              <input type="text" id="not-numero" placeholder="Ex.: 55/2026 - LRV-ENS/LRV-DG/CLRV/RTR/IFMT">
+            </div>
+            <div>
+              <label for="not-data">Data do documento</label>
+              <input type="date" id="not-data">
+            </div>
+          </div>
+
+          <label for="not-texto-principal">Texto da notificação</label>
+          <textarea id="not-texto-principal" rows="5"></textarea>
+
+          <label for="not-fundamentacao">Fundamentação (incisos infringidos)</label>
+          <textarea id="not-fundamentacao" rows="3"></textarea>
+
+          <label for="not-considerandos">Considerações adicionais (opcional — reincidência, agravantes etc.)</label>
+          <textarea id="not-considerandos" rows="3" placeholder="Ex.: Considerando o histórico do discente, que já possui registro anterior..."></textarea>
+
+          <div class="linha-form">
+            <div>
+              <label for="not-tipo-falta">Tipo de falta disciplinar</label>
+              <input type="text" id="not-tipo-falta">
+            </div>
+            <div>
+              <label for="not-medida">Medida disciplinar</label>
+              <input type="text" id="not-medida">
+            </div>
+          </div>
+
+          <label for="not-rodape">Texto final (regra de reincidência)</label>
+          <textarea id="not-rodape" rows="2"></textarea>
+
+          <div class="linha-resumo" style="margin-top:16px;">
+            <button id="btn-cancelar-notificacao">Cancelar</button>
+            <button id="btn-baixar-notificacao" class="btn-primario" style="margin-top:0;">Baixar notificação (.doc)</button>
+          </div>
+        </div>
+      </div>
+
     </div>
 
     <!-- Aba: painel por discente -->
@@ -250,6 +301,18 @@
     <div id="view-todos" style="display:none;">
       <div id="todos-resumo" class="grid-4"></div>
       <div id="todos-alertas"></div>
+
+      <div class="linha-form" style="margin:16px 0;">
+        <div class="pei-card">
+          <div class="pei-card-title">Ocorrências por nível</div>
+          <canvas id="grafico-niveis" height="220"></canvas>
+        </div>
+        <div class="pei-card">
+          <div class="pei-card-title">Ocorrências por curso</div>
+          <canvas id="grafico-cursos" height="220"></canvas>
+        </div>
+      </div>
+
       <table class="tabela">
         <thead>
           <tr><th>Discente</th><th>Curso</th><th>Ocorrências</th><th>Nível atual</th><th>Situação</th></tr>
@@ -291,11 +354,13 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script src="js/config.js"></script>
 <script src="js/regras.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/dados.js"></script>
 <script src="js/admin.js"></script>
+<script src="js/notificacao.js"></script>
 <script src="js/importacao.js"></script>
 <script src="js/app.js"></script>
 </body>

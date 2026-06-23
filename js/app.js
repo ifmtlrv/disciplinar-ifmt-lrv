@@ -103,24 +103,33 @@ async function iniciarAposLogin() {
 
 // -------------------- Lançamento --------------------
 
-function preencherSelectCursosEm(id) {
-  el(id).innerHTML =
-    '<option value="">Selecione o curso...</option>' +
-    CURSOS.map((g) => `<optgroup label="${g.grupo}">` + g.opcoes.map((c) => `<option value="${c}">${c}</option>`).join("") + `</optgroup>`).join("");
+function preencherDatalistCursos() {
+  const opcoes = CURSOS.flatMap((g) => g.opcoes);
+  el("lista-cursos").innerHTML = opcoes.map((c) => `<option value="${c}">`).join("");
 }
 
-function preencherSelectIncisosEm(id) {
-  el(id).innerHTML =
-    '<option value="">Selecione o inciso...</option>' +
-    INCISOS.map((i) => `<option value="${i[0]}">Art. 11, inciso ${i[0]} — ${i[1]}</option>`).join("");
+function preencherDatalistIncisos() {
+  el("lista-incisos").innerHTML = INCISOS.map((i) => `<option value="${i[0]} — ${i[1]}">`).join("");
 }
 
-function preencherSelectCursos() {
-  preencherSelectCursosEm("f-curso");
+function textoIncisoParaCodigo(texto) {
+  if (!texto) return "";
+  const romano = texto.split("—")[0].trim().toUpperCase();
+  const encontrado = INCISOS.find((i) => i[0].toUpperCase() === romano);
+  return encontrado ? encontrado[0] : "";
 }
 
-function preencherSelectIncisos() {
-  preencherSelectIncisosEm("f-inciso");
+function codigoIncisoParaTexto(codigo) {
+  const info = INCISOS.find((i) => i[0] === codigo);
+  return info ? `${info[0]} — ${info[1]}` : "";
+}
+
+function configurarBuscaInciso(idBusca, idOculto, idPreview) {
+  el(idBusca).addEventListener("input", () => {
+    const codigo = textoIncisoParaCodigo(el(idBusca).value);
+    el(idOculto).value = codigo;
+    if (idPreview) atualizarPreviewNivel();
+  });
 }
 
 function atualizarPreviewNivel() {
@@ -197,26 +206,32 @@ function aplicarFiltroOcorrencias() {
   el("ocorrencias-tbody").innerHTML = filtradas
     .map((o) => {
       const podeGerenciar = usuarioAtual.papel === "admin" || o.registrado_por === usuarioAtual.id;
-      const acoes = podeGerenciar
-        ? `<button class="acao-btn acao-editar" data-id="${o.id}">Editar</button>
-           <button class="acao-btn acao-excluir" data-id="${o.id}">Excluir</button>`
-        : `<span class="muted" style="font-size:12px;">—</span>`;
+      const acoesGestao = podeGerenciar
+        ? `<button class="acao-btn acao-editar btn-editar-ocorrencia" data-id="${o.id}">Editar</button>
+           <button class="acao-btn acao-excluir btn-excluir-ocorrencia" data-id="${o.id}">Excluir</button>`
+        : "";
       return `<tr>
         <td>${o.nome_discente}</td>
         <td class="muted">${o.curso}</td>
         <td>${formatarData(o.data_falta)}</td>
         <td>${o.inciso}</td>
         <td>${badge(o.nivel)}</td>
-        <td>${acoes}</td>
+        <td>
+          ${acoesGestao}
+          <button class="acao-btn acao-editar btn-gerar-notificacao" data-id="${o.id}">Notificação</button>
+        </td>
       </tr>`;
     })
     .join("") || `<tr><td colspan="6" class="muted">Nenhuma ocorrência encontrada.</td></tr>`;
 
-  el("ocorrencias-tbody").querySelectorAll(".acao-editar").forEach((btn) => {
+  el("ocorrencias-tbody").querySelectorAll(".btn-editar-ocorrencia").forEach((btn) => {
     btn.addEventListener("click", () => abrirModalEdicao(btn.dataset.id));
   });
-  el("ocorrencias-tbody").querySelectorAll(".acao-excluir").forEach((btn) => {
+  el("ocorrencias-tbody").querySelectorAll(".btn-excluir-ocorrencia").forEach((btn) => {
     btn.addEventListener("click", () => confirmarExclusao(btn.dataset.id));
+  });
+  el("ocorrencias-tbody").querySelectorAll(".btn-gerar-notificacao").forEach((btn) => {
+    btn.addEventListener("click", () => abrirModalNotificacao(btn.dataset.id, cacheOcorrencias));
   });
 }
 
@@ -229,6 +244,7 @@ function abrirModalEdicao(id) {
   el("edit-curso").value = o.curso;
   el("edit-data").value = o.data_falta;
   el("edit-inciso").value = o.inciso;
+  el("edit-inciso-busca").value = codigoIncisoParaTexto(o.inciso);
   el("edit-desc").value = o.descricao || "";
   el("edit-menor").value = o.menor_idade ? "sim" : "nao";
   el("msg-edicao").textContent = "";
@@ -314,8 +330,11 @@ function abrirPainelParaMatricula(matricula) {
   }, 50);
 }
 
+let cacheListaPainelAtual = [];
+
 async function renderizarPainelAluno(matricula) {
   const { data: lista } = await listarOcorrenciasPorMatricula(matricula);
+  cacheListaPainelAtual = lista;
   const cont = el("p-conteudo");
   if (!lista.length) {
     cont.innerHTML = '<p class="muted">Nenhuma ocorrência registrada.</p>';
@@ -341,8 +360,12 @@ async function renderizarPainelAluno(matricula) {
     html += `<div class="caixa-alerta ${classe}"><i class="ti ti-alert-triangle"></i><span>${sit.alerta.msg}</span></div>`;
   }
 
+  html += `<div class="linha-resumo" style="justify-content:flex-end; gap:10px;">
+    <button id="btn-imprimir-painel">🖶 Imprimir ocorrências</button>
+  </div>`;
+
   html += `<table class="tabela"><thead><tr>
-      <th>Data</th><th>Inciso</th><th>Descrição</th><th>Nível</th><th>Registrado por</th>
+      <th>Data</th><th>Inciso</th><th>Descrição</th><th>Nível</th><th>Registrado por</th><th>Notificação</th>
     </tr></thead><tbody>`;
   lista.forEach((o) => {
     html += `<tr>
@@ -351,10 +374,65 @@ async function renderizarPainelAluno(matricula) {
       <td>${o.descricao || "—"}</td>
       <td>${badge(o.nivel)}</td>
       <td class="muted">${o.registrado_por_nome || "—"}</td>
+      <td><button class="acao-btn acao-editar btn-gerar-notificacao" data-id="${o.id}">Gerar notificação</button></td>
     </tr>`;
   });
   html += `</tbody></table>`;
   cont.innerHTML = html;
+
+  el("btn-imprimir-painel").addEventListener("click", () => imprimirOcorrenciasDiscente(lista, sit));
+  cont.querySelectorAll(".btn-gerar-notificacao").forEach((btn) => {
+    btn.addEventListener("click", () => abrirModalNotificacao(btn.dataset.id, lista));
+  });
+}
+
+function imprimirOcorrenciasDiscente(lista, sit) {
+  const primeira = lista[0];
+  const linhas = lista
+    .map(
+      (o) => `<tr>
+        <td>${formatarData(o.data_falta)}</td>
+        <td>Art. 11, ${o.inciso}</td>
+        <td>${o.descricao || "—"}</td>
+        <td>${NIVEIS[o.nivel].label}</td>
+        <td>${o.registrado_por_nome || "—"}</td>
+      </tr>`
+    )
+    .join("");
+
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Histórico Disciplinar — ${primeira.nome_discente}</title>
+  <style>
+    body { font-family: Arial, sans-serif; color:#222; padding: 30px; }
+    h1 { font-size: 18px; margin-bottom: 4px; }
+    .sub { color:#555; font-size: 13px; margin-bottom: 20px; }
+    table { width:100%; border-collapse: collapse; font-size: 12.5px; }
+    th, td { border: 1px solid #999; padding: 6px 8px; text-align: left; }
+    th { background: #1B6B45; color: #fff; }
+    .resumo { margin-bottom: 16px; font-size: 13px; }
+    .rodape { margin-top: 30px; font-size: 11px; color: #666; }
+  </style>
+  </head><body>
+    <h1>IFMT — Campus Lucas do Rio Verde</h1>
+    <div class="sub">Histórico de ocorrências disciplinares — Resolução 113/2025 RTR-CONSUP/RTR/IFMT</div>
+    <div class="resumo">
+      <strong>Discente:</strong> ${primeira.nome_discente}<br>
+      <strong>Matrícula:</strong> ${primeira.matricula}<br>
+      <strong>Curso:</strong> ${primeira.curso}<br>
+      <strong>Nível atual:</strong> ${NIVEIS[sit.nivelAtual].label}<br>
+      <strong>Total de ocorrências:</strong> ${lista.length}
+    </div>
+    <table>
+      <thead><tr><th>Data</th><th>Inciso</th><th>Descrição</th><th>Nível</th><th>Registrado por</th></tr></thead>
+      <tbody>${linhas}</tbody>
+    </table>
+    <div class="rodape">Documento gerado pelo sistema de Controle Disciplinar Discente em ${new Date().toLocaleDateString("pt-BR")}.</div>
+  </body></html>`;
+
+  const janela = window.open("", "_blank");
+  janela.document.write(html);
+  janela.document.close();
+  janela.focus();
+  setTimeout(() => janela.print(), 300);
 }
 
 // -------------------- Visão geral --------------------
@@ -398,6 +476,52 @@ async function renderizarVisaoGeral() {
 
   el("todos-tbody").querySelectorAll(".link-discente").forEach((spanEl) => {
     spanEl.addEventListener("click", () => abrirPainelParaMatricula(spanEl.dataset.matricula));
+  });
+
+  renderizarGraficos(data, grupos);
+}
+
+let graficoNiveis = null;
+let graficoCursos = null;
+
+function renderizarGraficos(ocorrencias, grupos) {
+  const coresNivel = { leve: "#3c6e1f", media: "#8a5a06", grave: "#a8531f", gravissima: "#a31616" };
+  const contagemNivel = { leve: 0, media: 0, grave: 0, gravissima: 0 };
+  ocorrencias.forEach((o) => { contagemNivel[o.nivel] = (contagemNivel[o.nivel] || 0) + 1; });
+
+  const ctxNiveis = el("grafico-niveis").getContext("2d");
+  if (graficoNiveis) graficoNiveis.destroy();
+  graficoNiveis = new Chart(ctxNiveis, {
+    type: "doughnut",
+    data: {
+      labels: ["Leve", "Média", "Grave", "Gravíssima"],
+      datasets: [{
+        data: [contagemNivel.leve, contagemNivel.media, contagemNivel.grave, contagemNivel.gravissima],
+        backgroundColor: [coresNivel.leve, coresNivel.media, coresNivel.grave, coresNivel.gravissima]
+      }]
+    },
+    options: { plugins: { legend: { position: "bottom", labels: { font: { size: 12 } } } } }
+  });
+
+  const contagemCurso = {};
+  grupos.forEach((g) => {
+    contagemCurso[g.curso] = (contagemCurso[g.curso] || 0) + g.ocorrencias.length;
+  });
+  const cursosLabels = Object.keys(contagemCurso);
+  const cursosValores = Object.values(contagemCurso);
+
+  const ctxCursos = el("grafico-cursos").getContext("2d");
+  if (graficoCursos) graficoCursos.destroy();
+  graficoCursos = new Chart(ctxCursos, {
+    type: "bar",
+    data: {
+      labels: cursosLabels,
+      datasets: [{ label: "Ocorrências", data: cursosValores, backgroundColor: "#1B6B45" }]
+    },
+    options: {
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+    }
   });
 }
 
@@ -565,6 +689,57 @@ async function renderizarAdministracao() {
   });
 }
 
+// -------------------- Notificação de medida disciplinar --------------------
+
+function abrirModalNotificacao(id, listaOcorrencias) {
+  const o = listaOcorrencias.find((x) => x.id === id) || cacheOcorrencias.find((x) => x.id === id);
+  if (!o) return;
+  ocorrenciaParaNotificar = o;
+
+  const sugestao = sugerirTextoNotificacao(o);
+  el("not-numero").value = "";
+  el("not-data").value = new Date().toISOString().slice(0, 10);
+  el("not-texto-principal").value = sugestao.textoPrincipal;
+  el("not-fundamentacao").value = sugestao.fundamentacao;
+  el("not-considerandos").value = "";
+  el("not-tipo-falta").value = sugestao.tipoFalta;
+  el("not-medida").value = sugestao.medida;
+  el("not-rodape").value = sugestao.rodape;
+
+  el("modal-notificacao").style.display = "flex";
+}
+
+function fecharModalNotificacao() {
+  el("modal-notificacao").style.display = "none";
+}
+
+function configurarModalNotificacao() {
+  el("btn-cancelar-notificacao").addEventListener("click", fecharModalNotificacao);
+  el("modal-notificacao").addEventListener("click", (e) => {
+    if (e.target.id === "modal-notificacao") fecharModalNotificacao();
+  });
+
+  el("btn-baixar-notificacao").addEventListener("click", () => {
+    if (!ocorrenciaParaNotificar) return;
+    const o = ocorrenciaParaNotificar;
+    const dataDoc = el("not-data").value;
+
+    const html = gerarHtmlNotificacao({
+      numero: el("not-numero").value.trim() || "____/" + new Date().getFullYear(),
+      dataFormatadaExtenso: dataExtenso(dataDoc),
+      textoPrincipal: el("not-texto-principal").value.trim(),
+      fundamentacao: el("not-fundamentacao").value.trim(),
+      considerandos: el("not-considerandos").value.trim(),
+      tipoFalta: el("not-tipo-falta").value.trim(),
+      medida: el("not-medida").value.trim(),
+      rodape: el("not-rodape").value.trim()
+    });
+
+    downloadComoDoc(`Notificacao_${o.nome_discente}_${formatarData(o.data_falta).replace(/\//g, "-")}`, html);
+    fecharModalNotificacao();
+  });
+}
+
 // -------------------- Inicialização --------------------
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -572,11 +747,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   configurarFormularioLancamento();
   configurarImportacaoLote();
   configurarModalEdicao();
-  preencherSelectCursos();
-  preencherSelectIncisos();
-  preencherSelectCursosEm("edit-curso");
-  preencherSelectIncisosEm("edit-inciso");
-  el("f-inciso").addEventListener("change", atualizarPreviewNivel);
+  configurarModalNotificacao();
+  preencherDatalistCursos();
+  preencherDatalistIncisos();
+  configurarBuscaInciso("f-inciso-busca", "f-inciso", true);
+  configurarBuscaInciso("edit-inciso-busca", "edit-inciso", false);
 
   el("busca-ocorrencias").addEventListener("input", aplicarFiltroOcorrencias);
   el("p-busca").addEventListener("input", () => {
