@@ -334,6 +334,62 @@ button:hover { background: var(--fundo); }
   color: #fff;
 }
 
+/* ===== Modal de edição ===== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(13, 27, 42, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal-card {
+  background: #fff;
+  border-radius: 10px;
+  padding: 24px;
+  max-width: 560px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-card h3 {
+  color: var(--verde2);
+  font-size: 17.6px;
+  margin-bottom: 12px;
+}
+
+.acao-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 5px;
+}
+
+.acao-editar { color: var(--verde2); }
+.acao-editar:hover { background: var(--verde3); }
+.acao-excluir { color: var(--cor-gravissima); }
+.acao-excluir:hover { background: var(--cor-gravissima-fundo); }
+
+.link-discente {
+  color: var(--verde2);
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.link-discente:hover { color: var(--verde); }
+
+.select-papel-admin {
+  width: auto;
+  display: inline-block;
+}
+
 /* ===== Cards estilo PEI ===== */
 .pei-card {
   background: #fff;
@@ -438,3 +494,4 @@ textarea { resize: vertical; line-height: 1.55; }
   .topbar { padding: 10px 16px; }
   .breadcrumb { padding: 8px 16px; }
 }
+

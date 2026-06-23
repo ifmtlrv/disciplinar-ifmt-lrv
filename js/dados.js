@@ -41,6 +41,37 @@ async function listarOcorrenciasPorMatricula(matricula) {
   return { data: data || [], error };
 }
 
+function filtrarOcorrenciasPorTexto(ocorrencias, termo) {
+  if (!termo || !termo.trim()) return ocorrencias;
+  const alvo = termo.trim().toLowerCase();
+  return ocorrencias.filter((o) =>
+    [o.nome_discente, o.matricula, o.curso, o.inciso, o.descricao, o.registrado_por_nome]
+      .filter(Boolean)
+      .some((campo) => String(campo).toLowerCase().includes(alvo))
+  );
+}
+
+async function editarOcorrencia(id, { nomeDiscente, matricula, curso, dataFalta, inciso, descricao, menorIdade }) {
+  const info = incisoInfo(inciso);
+  const { data, error } = await supabaseClient.rpc("editar_ocorrencia", {
+    p_id: id,
+    p_nome_discente: nomeDiscente,
+    p_matricula: matricula,
+    p_curso: curso,
+    p_data_falta: dataFalta,
+    p_inciso: inciso,
+    p_nivel: info[2],
+    p_descricao: descricao,
+    p_menor_idade: menorIdade
+  });
+  return { data, error };
+}
+
+async function excluirOcorrencia(id) {
+  const { data, error } = await supabaseClient.rpc("excluir_ocorrencia", { p_id: id });
+  return { data, error };
+}
+
 function agruparPorDiscente(ocorrencias) {
   const mapa = new Map();
   ocorrencias.forEach((o) => {

@@ -88,8 +88,9 @@
 
     <div class="abas">
       <button id="tab-lanc" class="aba-btn">Lançar ocorrência</button>
-      <button id="tab-painel" class="aba-btn">Painel por aluno</button>
+      <button id="tab-painel" class="aba-btn">Painel por discente</button>
       <button id="tab-todos" class="aba-btn">Visão geral</button>
+      <button id="tab-admin" class="aba-btn" style="display:none;">Administração</button>
     </div>
 
     <!-- Aba: lançar ocorrência -->
@@ -141,6 +142,61 @@
             <p class="msg" id="msg-salvo"></p>
           </div>
         </form>
+
+        <div class="pei-card">
+          <label for="busca-ocorrencias">Buscar ocorrências registradas</label>
+          <input type="text" id="busca-ocorrencias" placeholder="Buscar por nome, matrícula, curso, inciso ou descrição...">
+        </div>
+        <div class="pei-card" style="overflow-x:auto;">
+          <table class="tabela">
+            <thead>
+              <tr><th>Discente</th><th>Curso</th><th>Data</th><th>Inciso</th><th>Nível</th><th>Ações</th></tr>
+            </thead>
+            <tbody id="ocorrencias-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Modal de edição de ocorrência -->
+      <div id="modal-editar" class="modal-overlay" style="display:none;">
+        <div class="modal-card">
+          <h3>Editar ocorrência</h3>
+          <input type="hidden" id="edit-id">
+          <div class="linha-form">
+            <div>
+              <label for="edit-nome">Nome do discente</label>
+              <input type="text" id="edit-nome">
+            </div>
+            <div>
+              <label for="edit-matricula">Matrícula</label>
+              <input type="text" id="edit-matricula">
+            </div>
+          </div>
+          <div class="linha-form">
+            <div>
+              <label for="edit-curso">Curso</label>
+              <select id="edit-curso"></select>
+            </div>
+            <div>
+              <label for="edit-data">Data da falta</label>
+              <input type="date" id="edit-data">
+            </div>
+          </div>
+          <label for="edit-inciso">Inciso do Art. 11 infringido</label>
+          <select id="edit-inciso"></select>
+          <label for="edit-desc">Descrição objetiva da ocorrência</label>
+          <textarea id="edit-desc" rows="3"></textarea>
+          <label for="edit-menor">Menor de idade?</label>
+          <select id="edit-menor">
+            <option value="nao">Não</option>
+            <option value="sim">Sim — notificar responsáveis (Art. 14, §4º)</option>
+          </select>
+          <div class="linha-resumo" style="margin-top:16px;">
+            <button id="btn-cancelar-edicao">Cancelar</button>
+            <button id="btn-salvar-edicao" class="btn-primario" style="margin-top:0;">Salvar alterações</button>
+          </div>
+          <p class="msg" id="msg-edicao"></p>
+        </div>
       </div>
 
       <div id="sub-lote" style="display:none;">
@@ -179,9 +235,11 @@
 
     </div>
 
-    <!-- Aba: painel por aluno -->
+    <!-- Aba: painel por discente -->
     <div id="view-painel" style="display:none;">
       <div class="pei-card">
+        <label for="p-busca">Buscar discente</label>
+        <input type="text" id="p-busca" placeholder="Digite o nome ou matrícula para filtrar a lista...">
         <label for="p-select">Selecionar discente</label>
         <select id="p-select"></select>
       </div>
@@ -200,6 +258,27 @@
       </table>
     </div>
 
+    <!-- Aba: administração (somente admin) -->
+    <div id="view-admin" style="display:none;">
+      <div class="pei-card">
+        <div class="pei-card-title">Usuários pendentes de aprovação</div>
+        <table class="tabela">
+          <thead><tr><th>Nome</th><th>E-mail</th><th>Cadastrado em</th><th>Aprovar como</th></tr></thead>
+          <tbody id="admin-pendentes-tbody"></tbody>
+        </table>
+        <p class="muted" id="admin-pendentes-vazio" style="display:none;">Nenhum usuário pendente no momento.</p>
+      </div>
+
+      <div class="pei-card">
+        <div class="pei-card-title">Todos os usuários</div>
+        <table class="tabela">
+          <thead><tr><th>Nome</th><th>E-mail</th><th>Papel atual</th><th>Alterar para</th></tr></thead>
+          <tbody id="admin-usuarios-tbody"></tbody>
+        </table>
+      </div>
+      <p class="msg" id="msg-admin"></p>
+    </div>
+
     <div class="rodape-app">
       <strong>IFMT | Campus Lucas do Rio Verde</strong><br>
       Av. Universitária, 1600-W, Parque das Emas — Lucas do Rio Verde - MT — CEP 78455-000<br>
@@ -216,6 +295,7 @@
 <script src="js/regras.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/dados.js"></script>
+<script src="js/admin.js"></script>
 <script src="js/importacao.js"></script>
 <script src="js/app.js"></script>
 </body>

@@ -23,12 +23,14 @@ function mostrarTela(tela) {
 }
 
 function mostrarAba(aba) {
-  ["lanc", "painel", "todos"].forEach((a) => {
+  ["lanc", "painel", "todos", "admin"].forEach((a) => {
     el("view-" + a).style.display = a === aba ? "block" : "none";
     el("tab-" + a).classList.toggle("active", a === aba);
   });
+  if (aba === "lanc") renderizarListaOcorrencias();
   if (aba === "painel") preencherSelectAlunos();
   if (aba === "todos") renderizarVisaoGeral();
+  if (aba === "admin") renderizarAdministracao();
 }
 
 // -------------------- Login / Cadastro --------------------
@@ -92,6 +94,7 @@ async function iniciarAposLogin() {
 
   const ehAdmin = perfil.papel === "admin";
   el("subtab-lote").style.display = ehAdmin ? "inline-flex" : "none";
+  el("tab-admin").style.display = ehAdmin ? "flex" : "none";
   if (!ehAdmin) mostrarSubAba("individual");
 
   mostrarTela("tela-app");
@@ -100,16 +103,24 @@ async function iniciarAposLogin() {
 
 // -------------------- Lançamento --------------------
 
-function preencherSelectCursos() {
-  el("f-curso").innerHTML =
+function preencherSelectCursosEm(id) {
+  el(id).innerHTML =
     '<option value="">Selecione o curso...</option>' +
     CURSOS.map((g) => `<optgroup label="${g.grupo}">` + g.opcoes.map((c) => `<option value="${c}">${c}</option>`).join("") + `</optgroup>`).join("");
 }
 
-function preencherSelectIncisos() {
-  el("f-inciso").innerHTML =
+function preencherSelectIncisosEm(id) {
+  el(id).innerHTML =
     '<option value="">Selecione o inciso...</option>' +
     INCISOS.map((i) => `<option value="${i[0]}">Art. 11, inciso ${i[0]} — ${i[1]}</option>`).join("");
+}
+
+function preencherSelectCursos() {
+  preencherSelectCursosEm("f-curso");
+}
+
+function preencherSelectIncisos() {
+  preencherSelectIncisosEm("f-inciso");
 }
 
 function atualizarPreviewNivel() {
@@ -167,14 +178,140 @@ function configurarFormularioLancamento() {
   });
 }
 
+// -------------------- Lista de ocorrências (busca, editar, excluir) --------------------
+
+let cacheOcorrencias = [];
+
+async function renderizarListaOcorrencias() {
+  const { data } = await listarTodasOcorrencias();
+  cacheOcorrencias = data;
+  aplicarFiltroOcorrencias();
+}
+
+function aplicarFiltroOcorrencias() {
+  const termo = el("busca-ocorrencias").value;
+  const filtradas = filtrarOcorrenciasPorTexto(cacheOcorrencias, termo)
+    .slice()
+    .sort((a, b) => (a.data_falta < b.data_falta ? 1 : -1));
+
+  el("ocorrencias-tbody").innerHTML = filtradas
+    .map((o) => {
+      const podeGerenciar = usuarioAtual.papel === "admin" || o.registrado_por === usuarioAtual.id;
+      const acoes = podeGerenciar
+        ? `<button class="acao-btn acao-editar" data-id="${o.id}">Editar</button>
+           <button class="acao-btn acao-excluir" data-id="${o.id}">Excluir</button>`
+        : `<span class="muted" style="font-size:12px;">—</span>`;
+      return `<tr>
+        <td>${o.nome_discente}</td>
+        <td class="muted">${o.curso}</td>
+        <td>${formatarData(o.data_falta)}</td>
+        <td>${o.inciso}</td>
+        <td>${badge(o.nivel)}</td>
+        <td>${acoes}</td>
+      </tr>`;
+    })
+    .join("") || `<tr><td colspan="6" class="muted">Nenhuma ocorrência encontrada.</td></tr>`;
+
+  el("ocorrencias-tbody").querySelectorAll(".acao-editar").forEach((btn) => {
+    btn.addEventListener("click", () => abrirModalEdicao(btn.dataset.id));
+  });
+  el("ocorrencias-tbody").querySelectorAll(".acao-excluir").forEach((btn) => {
+    btn.addEventListener("click", () => confirmarExclusao(btn.dataset.id));
+  });
+}
+
+function abrirModalEdicao(id) {
+  const o = cacheOcorrencias.find((x) => x.id === id);
+  if (!o) return;
+  el("edit-id").value = o.id;
+  el("edit-nome").value = o.nome_discente;
+  el("edit-matricula").value = o.matricula;
+  el("edit-curso").value = o.curso;
+  el("edit-data").value = o.data_falta;
+  el("edit-inciso").value = o.inciso;
+  el("edit-desc").value = o.descricao || "";
+  el("edit-menor").value = o.menor_idade ? "sim" : "nao";
+  el("msg-edicao").textContent = "";
+  el("modal-editar").style.display = "flex";
+}
+
+function fecharModalEdicao() {
+  el("modal-editar").style.display = "none";
+}
+
+async function confirmarExclusao(id) {
+  const o = cacheOcorrencias.find((x) => x.id === id);
+  if (!o) return;
+  const ok = confirm(`Excluir a ocorrência de ${o.nome_discente} (${formatarData(o.data_falta)})? Esta ação será registrada no histórico e não pode ser desfeita pela interface.`);
+  if (!ok) return;
+
+  const { error } = await excluirOcorrencia(id);
+  if (error) {
+    alert("Não foi possível excluir: " + error.message);
+    return;
+  }
+  await renderizarListaOcorrencias();
+}
+
+function configurarModalEdicao() {
+  el("btn-cancelar-edicao").addEventListener("click", fecharModalEdicao);
+  el("modal-editar").addEventListener("click", (e) => {
+    if (e.target.id === "modal-editar") fecharModalEdicao();
+  });
+
+  el("btn-salvar-edicao").addEventListener("click", async () => {
+    const msg = el("msg-edicao");
+    const payload = {
+      nomeDiscente: el("edit-nome").value.trim(),
+      matricula: el("edit-matricula").value.trim(),
+      curso: el("edit-curso").value,
+      dataFalta: el("edit-data").value,
+      inciso: el("edit-inciso").value,
+      descricao: el("edit-desc").value.trim(),
+      menorIdade: el("edit-menor").value === "sim"
+    };
+
+    if (!payload.nomeDiscente || !payload.matricula || !payload.curso || !payload.dataFalta || !payload.inciso) {
+      msg.textContent = "Preencha nome, matrícula, curso, data e inciso.";
+      msg.className = "msg msg-erro";
+      return;
+    }
+
+    msg.textContent = "Salvando...";
+    msg.className = "msg";
+    const { error } = await editarOcorrencia(el("edit-id").value, payload);
+    if (error) {
+      msg.textContent = "Erro: " + error.message;
+      msg.className = "msg msg-erro";
+      return;
+    }
+    fecharModalEdicao();
+    await renderizarListaOcorrencias();
+  });
+}
+
 // -------------------- Painel por aluno --------------------
+
+let cacheGruposDiscentes = [];
 
 async function preencherSelectAlunos() {
   const { data } = await listarTodasOcorrencias();
-  const grupos = agruparPorDiscente(data);
-  el("p-select").innerHTML = grupos.map((g) => `<option value="${g.matricula}">${g.nome} — ${g.matricula}</option>`).join("");
-  if (grupos.length) renderizarPainelAluno(grupos[0].matricula);
+  cacheGruposDiscentes = agruparPorDiscente(data);
+  renderizarOpcoesDiscentes(cacheGruposDiscentes);
+  if (cacheGruposDiscentes.length) renderizarPainelAluno(cacheGruposDiscentes[0].matricula);
   el("p-select").onchange = (e) => renderizarPainelAluno(e.target.value);
+}
+
+function renderizarOpcoesDiscentes(grupos) {
+  el("p-select").innerHTML = grupos.map((g) => `<option value="${g.matricula}">${g.nome} — ${g.matricula}</option>`).join("");
+}
+
+function abrirPainelParaMatricula(matricula) {
+  mostrarAba("painel");
+  setTimeout(() => {
+    el("p-select").value = matricula;
+    renderizarPainelAluno(matricula);
+  }, 50);
 }
 
 async function renderizarPainelAluno(matricula) {
@@ -250,7 +387,7 @@ async function renderizarVisaoGeral() {
   el("todos-tbody").innerHTML = grupos
     .map(
       (g) => `<tr>
-      <td>${g.nome}</td>
+      <td><span class="link-discente" data-matricula="${g.matricula}">${g.nome}</span></td>
       <td class="muted">${g.curso}</td>
       <td>${g.ocorrencias.length}</td>
       <td>${badge(g.sit.nivelAtual)}</td>
@@ -258,6 +395,10 @@ async function renderizarVisaoGeral() {
     </tr>`
     )
     .join("");
+
+  el("todos-tbody").querySelectorAll(".link-discente").forEach((spanEl) => {
+    spanEl.addEventListener("click", () => abrirPainelParaMatricula(spanEl.dataset.matricula));
+  });
 }
 
 // -------------------- Importação em lote --------------------
@@ -342,19 +483,115 @@ function configurarImportacaoLote() {
   });
 }
 
+// -------------------- Administração (apenas admin) --------------------
+
+const OPCOES_PAPEL = [
+  { valor: "coordenacao", label: "Coordenação de Curso" },
+  { valor: "chefia", label: "Chefia do Departamento de Ensino" },
+  { valor: "admin", label: "Administrador" }
+];
+
+function selectPapelHtml(userId, papelAtual) {
+  return `<select class="select-papel-admin" data-userid="${userId}">
+    <option value="">Selecione...</option>
+    ${OPCOES_PAPEL.map((o) => `<option value="${o.valor}" ${o.valor === papelAtual ? "selected" : ""}>${o.label}</option>`).join("")}
+  </select>
+  <button class="acao-btn acao-editar btn-aplicar-papel" data-userid="${userId}">Aplicar</button>`;
+}
+
+async function renderizarAdministracao() {
+  const msg = el("msg-admin");
+  msg.textContent = "";
+
+  const { data: pendentes, error: erroPendentes } = await listarUsuariosPendentes();
+  if (erroPendentes) {
+    msg.textContent = "Erro ao carregar pendentes: " + erroPendentes.message;
+    msg.className = "msg msg-erro";
+    return;
+  }
+
+  el("admin-pendentes-vazio").style.display = pendentes.length ? "none" : "block";
+  el("admin-pendentes-tbody").innerHTML = pendentes
+    .map(
+      (u) => `<tr>
+      <td>${u.nome_completo}</td>
+      <td class="muted">${u.email}</td>
+      <td class="muted">${new Date(u.criado_em).toLocaleDateString("pt-BR")}</td>
+      <td>${selectPapelHtml(u.id, "")}</td>
+    </tr>`
+    )
+    .join("");
+
+  const { data: todos, error: erroTodos } = await listarTodosUsuarios();
+  if (erroTodos) {
+    msg.textContent = "Erro ao carregar usuários: " + erroTodos.message;
+    msg.className = "msg msg-erro";
+    return;
+  }
+
+  el("admin-usuarios-tbody").innerHTML = todos
+    .map(
+      (u) => `<tr>
+      <td>${u.nome_completo}</td>
+      <td class="muted">${u.email}</td>
+      <td>${PAPEL_LABEL[u.papel] || u.papel}</td>
+      <td>${selectPapelHtml(u.id, u.papel)}</td>
+    </tr>`
+    )
+    .join("");
+
+  document.querySelectorAll(".btn-aplicar-papel").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const userId = btn.dataset.userid;
+      const select = document.querySelector(`select[data-userid="${userId}"]`);
+      const novoPapel = select.value;
+      if (!novoPapel) {
+        msg.textContent = "Selecione um papel antes de aplicar.";
+        msg.className = "msg msg-erro";
+        return;
+      }
+      msg.textContent = "Atualizando...";
+      msg.className = "msg";
+      const { error } = await alterarPapelUsuario(userId, novoPapel);
+      if (error) {
+        msg.textContent = "Erro: " + error.message;
+        msg.className = "msg msg-erro";
+        return;
+      }
+      msg.textContent = "Papel atualizado com sucesso.";
+      msg.className = "msg msg-sucesso";
+      await renderizarAdministracao();
+    });
+  });
+}
+
 // -------------------- Inicialização --------------------
 
 document.addEventListener("DOMContentLoaded", async () => {
   configurarTelaLogin();
   configurarFormularioLancamento();
   configurarImportacaoLote();
+  configurarModalEdicao();
   preencherSelectCursos();
   preencherSelectIncisos();
+  preencherSelectCursosEm("edit-curso");
+  preencherSelectIncisosEm("edit-inciso");
   el("f-inciso").addEventListener("change", atualizarPreviewNivel);
+
+  el("busca-ocorrencias").addEventListener("input", aplicarFiltroOcorrencias);
+  el("p-busca").addEventListener("input", () => {
+    const termo = el("p-busca").value.trim().toLowerCase();
+    const filtrados = !termo
+      ? cacheGruposDiscentes
+      : cacheGruposDiscentes.filter((g) => g.nome.toLowerCase().includes(termo) || g.matricula.toLowerCase().includes(termo));
+    renderizarOpcoesDiscentes(filtrados);
+    if (filtrados.length) renderizarPainelAluno(filtrados[0].matricula);
+  });
 
   el("tab-lanc").addEventListener("click", () => mostrarAba("lanc"));
   el("tab-painel").addEventListener("click", () => mostrarAba("painel"));
   el("tab-todos").addEventListener("click", () => mostrarAba("todos"));
+  el("tab-admin").addEventListener("click", () => mostrarAba("admin"));
   el("btn-sair").addEventListener("click", sair);
   el("btn-sair-pendente").addEventListener("click", sair);
 
