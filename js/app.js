@@ -522,9 +522,23 @@ async function renderizarVisaoGeral() {
   const { data } = await listarTodasOcorrencias();
   const grupos = agruparPorDiscente(data).map((g) => ({ ...g, sit: calcularSituacao(g.ocorrencias) }));
 
+  // Garante que o cache de resoluções está atualizado antes de decidir
+  // quais alertas ainda estão ativos (mesma lógica usada no Painel por discente).
+  const { data: resolucoes } = await listarAlertasResolvidos();
+  cacheResolucoesAlertas = resolucoes;
+
+  const grupoEstaResolvido = (g) => {
+    if (!g.sit.alerta) return false;
+    const ultimaData = g.ocorrencias.slice().sort((a, b) => (a.data_falta > b.data_falta ? -1 : 1))[0].data_falta;
+    return alertaEstaResolvido(g.matricula, ultimaData);
+  };
+
+  const gruposComAlertaAtivo = grupos.filter((g) => g.sit.alerta && !grupoEstaResolvido(g));
+  const gruposComAlertaResolvido = grupos.filter((g) => g.sit.alerta && grupoEstaResolvido(g));
+
   const totalAlunos = grupos.length;
   const totalOcorr = data.length;
-  const emAlerta = grupos.filter((g) => g.sit.alerta).length;
+  const emAlerta = gruposComAlertaAtivo.length;
   const gravissimas = grupos.filter((g) => g.sit.nivelAtual === "gravissima").length;
 
   el("todos-resumo").innerHTML = `
@@ -533,9 +547,8 @@ async function renderizarVisaoGeral() {
     <div class="card-metric"><div class="metric-label">Em alerta de progressão</div><div class="metric-valor">${emAlerta}</div></div>
     <div class="card-metric"><div class="metric-label">Risco de desligamento</div><div class="metric-valor">${gravissimas}</div></div>`;
 
-  const comAlerta = grupos.filter((g) => g.sit.alerta);
-  el("todos-alertas").innerHTML = comAlerta.length
-    ? comAlerta
+  el("todos-alertas").innerHTML = gruposComAlertaAtivo.length
+    ? gruposComAlertaAtivo
         .map((g) => {
           const classe = g.sit.alerta.tipo.includes("gravissima") || g.sit.alerta.tipo.includes("grave_para") ? "alerta-critico" : "alerta-atencao";
           return `<div class="caixa-alerta ${classe}"><i class="ti ti-alert-triangle"></i><span><strong>${g.nome}</strong> (${g.matricula}) — ${g.sit.alerta.msg}</span></div>`;
@@ -544,29 +557,32 @@ async function renderizarVisaoGeral() {
     : '<p class="muted">Nenhum aluno em situação de alerta no momento.</p>';
 
   el("todos-tbody").innerHTML = grupos
-    .map(
-      (g) => `<tr>
+    .map((g) => {
+      let situacao = "Regular";
+      if (g.sit.alerta) situacao = grupoEstaResolvido(g) ? "Alerta resolvido" : "Requer atenção";
+      return `<tr>
       <td><span class="link-discente" data-matricula="${g.matricula}">${g.nome}</span></td>
       <td class="muted">${g.curso}</td>
       <td>${g.ocorrencias.length}</td>
       <td>${badge(g.sit.nivelAtual)}</td>
-      <td class="muted">${g.sit.alerta ? "Requer atenção" : "Regular"}</td>
-    </tr>`
-    )
+      <td class="muted">${situacao}</td>
+    </tr>`;
+    })
     .join("");
 
   el("todos-tbody").querySelectorAll(".link-discente").forEach((spanEl) => {
     spanEl.addEventListener("click", () => abrirPainelParaMatricula(spanEl.dataset.matricula));
   });
 
-  renderizarGraficos(data, grupos);
+  renderizarGraficos(data, grupos, gruposComAlertaAtivo.length, gruposComAlertaResolvido.length);
 }
 
 let graficoNiveis = null;
 let graficoCursos = null;
+let graficoAlertas = null;
 
-function renderizarGraficos(ocorrencias, grupos) {
-  const coresNivel = { leve: "#3c6e1f", media: "#8a5a06", grave: "#a8531f", gravissima: "#a31616" };
+function renderizarGraficos(ocorrencias, grupos, qtdAlertaAtivo, qtdAlertaResolvido) {
+  const coresNivel = { leve: "#378ADD", media: "#7F77DD", grave: "#D85A30", gravissima: "#A32D2D" };
   const contagemNivel = { leve: 0, media: 0, grave: 0, gravissima: 0 };
   ocorrencias.forEach((o) => { contagemNivel[o.nivel] = (contagemNivel[o.nivel] || 0) + 1; });
 
@@ -603,6 +619,20 @@ function renderizarGraficos(ocorrencias, grupos) {
       plugins: { legend: { display: false } },
       scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
     }
+  });
+
+  const ctxAlertas = el("grafico-alertas").getContext("2d");
+  if (graficoAlertas) graficoAlertas.destroy();
+  graficoAlertas = new Chart(ctxAlertas, {
+    type: "doughnut",
+    data: {
+      labels: ["Em alerta (ativo)", "Alerta resolvido"],
+      datasets: [{
+        data: [qtdAlertaAtivo, qtdAlertaResolvido],
+        backgroundColor: ["#A32D2D", "#1D9E75"]
+      }]
+    },
+    options: { plugins: { legend: { position: "bottom", labels: { font: { size: 12 } } } } }
   });
 }
 

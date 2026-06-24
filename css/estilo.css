@@ -308,7 +308,8 @@ button:hover { background: var(--fundo); }
 
 .aba-btn.active {
   color: #fff;
-  border-bottom-color: var(--verde4);
+  border-bottom-color: #F2B705;
+  border-bottom-width: 4px;
   background: transparent;
 }
 
@@ -357,7 +358,8 @@ button:hover { background: var(--fundo); }
 
 .subtab-btn.active {
   color: #fff;
-  border-bottom-color: var(--verde4);
+  border-bottom-color: #F2B705;
+  border-bottom-width: 4px;
   background: transparent;
 }
 
@@ -554,9 +556,23 @@ textarea { resize: vertical; line-height: 1.55; }
   border-radius: 10px;
   padding: 1rem;
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
 }
 
-.metric-label { font-size: 14.3px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }
+.metric-label {
+  font-size: 14.3px;
+  color: var(--muted);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  min-height: 2.6em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.3;
+}
 .metric-valor { font-size: 34px; font-weight: 800; margin-top: 5px; color: var(--verde2); }
 
 .linha-resumo { display: flex; align-items: center; gap: 13px; font-size: 16.9px; margin-bottom: 1.25rem; }
