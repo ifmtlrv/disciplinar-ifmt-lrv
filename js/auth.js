@@ -43,3 +43,17 @@ async function carregarPerfilAtual() {
   usuarioAtual = perfil;
   return perfil;
 }
+
+function detectarFluxoDefinirSenha() {
+  // O Supabase coloca esses parâmetros na URL (após o #) quando o link
+  // é de recuperação de senha ou de convite de novo usuário.
+  const hash = window.location.hash || "";
+  const params = new URLSearchParams(hash.replace(/^#/, ""));
+  const tipo = params.get("type");
+  return tipo === "recovery" || tipo === "invite";
+}
+
+async function definirNovaSenha(novaSenha) {
+  const { data, error } = await supabaseClient.auth.updateUser({ password: novaSenha });
+  return { data, error };
+}

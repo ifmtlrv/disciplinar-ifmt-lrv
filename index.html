@@ -56,6 +56,22 @@
   </div>
 </div>
 
+<!-- TELA DE DEFINIR NOVA SENHA (vinda de convite ou recuperação) -->
+<div id="tela-definir-senha" class="tela-centralizada tela-topo-fina" style="display:none;">
+  <div class="cartao-login">
+    <h2>Defina sua senha de acesso</h2>
+    <p class="descricao">Este é o primeiro acesso pelo link recebido por e-mail. Defina uma senha para continuar.</p>
+    <form id="form-definir-senha">
+      <label for="nova-senha">Nova senha (mínimo 6 caracteres)</label>
+      <input type="password" id="nova-senha" minlength="6" required>
+      <label for="nova-senha-confirmar">Confirme a nova senha</label>
+      <input type="password" id="nova-senha-confirmar" minlength="6" required>
+      <button type="submit" class="btn-primario">Salvar senha e entrar</button>
+      <p class="msg" id="msg-definir-senha"></p>
+    </form>
+  </div>
+</div>
+
 <!-- TELA PRINCIPAL DO APP -->
 <div id="tela-app" style="display:none;">
 
@@ -160,49 +176,6 @@
         </div>
       </div>
 
-      <!-- Modal de edição de ocorrência -->
-      <div id="modal-editar" class="modal-overlay" style="display:none;">
-        <div class="modal-card">
-          <h3>Editar ocorrência</h3>
-          <input type="hidden" id="edit-id">
-          <div class="linha-form">
-            <div>
-              <label for="edit-nome">Nome do discente</label>
-              <input type="text" id="edit-nome">
-            </div>
-            <div>
-              <label for="edit-matricula">Matrícula</label>
-              <input type="text" id="edit-matricula">
-            </div>
-          </div>
-          <div class="linha-form">
-            <div>
-              <label for="edit-curso">Curso</label>
-              <input type="text" id="edit-curso" list="lista-cursos" placeholder="Digite para buscar o curso..." autocomplete="off">
-            </div>
-            <div>
-              <label for="edit-data">Data da falta</label>
-              <input type="date" id="edit-data">
-            </div>
-          </div>
-          <label for="edit-inciso">Inciso do Art. 11 infringido</label>
-          <input type="text" id="edit-inciso-busca" list="lista-incisos" placeholder="Digite o número do inciso ou palavras da descrição..." autocomplete="off">
-          <input type="hidden" id="edit-inciso">
-          <label for="edit-desc">Descrição objetiva da ocorrência</label>
-          <textarea id="edit-desc" rows="3"></textarea>
-          <label for="edit-menor">Menor de idade?</label>
-          <select id="edit-menor">
-            <option value="nao">Não</option>
-            <option value="sim">Sim — notificar responsáveis (Art. 14, §4º)</option>
-          </select>
-          <div class="linha-resumo" style="margin-top:16px;">
-            <button id="btn-cancelar-edicao">Cancelar</button>
-            <button id="btn-salvar-edicao" class="btn-primario" style="margin-top:0;">Salvar alterações</button>
-          </div>
-          <p class="msg" id="msg-edicao"></p>
-        </div>
-      </div>
-
       <div id="sub-lote" style="display:none;">
         <div class="pei-card">
           <label>Planilha de lançamentos (.xlsx)</label>
@@ -237,86 +210,6 @@
         </div>
       </div>
 
-      <!-- Modal de notificação de medida disciplinar -->
-      <div id="modal-notificacao" class="modal-overlay" style="display:none;">
-        <div class="modal-card" style="max-width:680px;">
-          <h3>Gerar notificação de medida disciplinar</h3>
-          <p class="muted" style="font-size:13px; margin-bottom:14px;">Revise e ajuste o texto sugerido. O número e o cabeçalho da notificação serão gerados automaticamente no SUAP a partir deste documento.</p>
-
-          <label for="not-data">Data do documento</label>
-          <input type="date" id="not-data" style="max-width:220px;">
-
-          <label for="not-texto-principal">Texto da notificação</label>
-          <textarea id="not-texto-principal" rows="5"></textarea>
-
-          <label for="not-fundamentacao">Fundamentação (incisos infringidos)</label>
-          <textarea id="not-fundamentacao" rows="3"></textarea>
-
-          <label for="not-considerandos">Considerações adicionais (opcional — reincidência, agravantes etc.)</label>
-          <textarea id="not-considerandos" rows="3" placeholder="Ex.: Considerando o histórico do discente, que já possui registro anterior..."></textarea>
-
-          <div class="linha-form">
-            <div>
-              <label for="not-tipo-falta">Tipo de falta disciplinar</label>
-              <input type="text" id="not-tipo-falta">
-            </div>
-            <div>
-              <label for="not-medida">Medida disciplinar</label>
-              <input type="text" id="not-medida">
-            </div>
-          </div>
-
-          <label for="not-rodape">Texto final (regra de reincidência)</label>
-          <textarea id="not-rodape" rows="2"></textarea>
-
-          <div class="linha-resumo" style="margin-top:16px;">
-            <button id="btn-cancelar-notificacao">Cancelar</button>
-            <button id="btn-ver-previa-notificacao" class="btn-primario" style="margin-top:0;">Visualizar prévia</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Modal de prévia da notificação -->
-      <div id="modal-previa-notificacao" class="modal-overlay" style="display:none;">
-        <div class="modal-card" style="max-width:680px;">
-          <h3>Prévia da notificação</h3>
-          <div id="previa-documento" class="previa-documento"></div>
-          <div class="linha-resumo" style="margin-top:16px; flex-wrap:wrap;">
-            <button id="btn-voltar-editar-notificacao">Voltar e editar</button>
-            <button id="btn-imprimir-notificacao">🖶 Imprimir</button>
-            <button id="btn-copiar-notificacao">Copiar texto</button>
-            <button id="btn-baixar-notificacao" class="btn-primario" style="margin-top:0;">Baixar .docx</button>
-          </div>
-          <p class="msg" id="msg-previa-notificacao"></p>
-        </div>
-      </div>
-
-      <!-- Modal de resolução de alerta -->
-      <div id="modal-alerta" class="modal-overlay" style="display:none;">
-        <div class="modal-card">
-          <h3>Registrar resolução do alerta</h3>
-          <p class="muted" id="alerta-descricao" style="font-size:13px; margin-bottom:14px;"></p>
-          <input type="hidden" id="alerta-matricula">
-          <input type="hidden" id="alerta-nome">
-          <input type="hidden" id="alerta-tipo">
-
-          <label for="alerta-acao">Ação tomada</label>
-          <select id="alerta-acao"></select>
-
-          <label for="alerta-data">Data da ação</label>
-          <input type="date" id="alerta-data">
-
-          <label for="alerta-obs">Observação (opcional)</label>
-          <textarea id="alerta-obs" rows="3" placeholder="Detalhes adicionais sobre a providência..."></textarea>
-
-          <div class="linha-resumo" style="margin-top:16px;">
-            <button id="btn-cancelar-alerta">Cancelar</button>
-            <button id="btn-confirmar-alerta" class="btn-primario" style="margin-top:0;">Confirmar resolução</button>
-          </div>
-          <p class="msg" id="msg-alerta"></p>
-        </div>
-      </div>
-
     </div>
 
     <!-- Aba: painel por discente -->
@@ -324,8 +217,7 @@
       <div class="pei-card">
         <label for="p-busca">Buscar discente</label>
         <input type="text" id="p-busca" placeholder="Digite o nome ou matrícula para filtrar a lista...">
-        <label for="p-select">Selecionar discente</label>
-        <select id="p-select"></select>
+        <select id="p-select" style="margin-top:10px;"></select>
       </div>
       <div id="p-conteudo"></div>
     </div>
@@ -380,6 +272,129 @@
         </table>
       </div>
       <p class="msg" id="msg-admin"></p>
+    </div>
+
+    <!-- Modal de edição de ocorrência -->
+    <div id="modal-editar" class="modal-overlay" style="display:none;">
+      <div class="modal-card">
+        <h3>Editar ocorrência</h3>
+        <input type="hidden" id="edit-id">
+        <div class="linha-form">
+          <div>
+            <label for="edit-nome">Nome do discente</label>
+            <input type="text" id="edit-nome">
+          </div>
+          <div>
+            <label for="edit-matricula">Matrícula</label>
+            <input type="text" id="edit-matricula">
+          </div>
+        </div>
+        <div class="linha-form">
+          <div>
+            <label for="edit-curso">Curso</label>
+            <input type="text" id="edit-curso" list="lista-cursos" placeholder="Digite para buscar o curso..." autocomplete="off">
+          </div>
+          <div>
+            <label for="edit-data">Data da falta</label>
+            <input type="date" id="edit-data">
+          </div>
+        </div>
+        <label for="edit-inciso">Inciso do Art. 11 infringido</label>
+        <input type="text" id="edit-inciso-busca" list="lista-incisos" placeholder="Digite o número do inciso ou palavras da descrição..." autocomplete="off">
+        <input type="hidden" id="edit-inciso">
+        <label for="edit-desc">Descrição objetiva da ocorrência</label>
+        <textarea id="edit-desc" rows="3"></textarea>
+        <label for="edit-menor">Menor de idade?</label>
+        <select id="edit-menor">
+          <option value="nao">Não</option>
+          <option value="sim">Sim — notificar responsáveis (Art. 14, §4º)</option>
+        </select>
+        <div class="linha-resumo" style="margin-top:16px;">
+          <button id="btn-cancelar-edicao">Cancelar</button>
+          <button id="btn-salvar-edicao" class="btn-primario" style="margin-top:0;">Salvar alterações</button>
+        </div>
+        <p class="msg" id="msg-edicao"></p>
+      </div>
+    </div>
+
+    <!-- Modal de notificação de medida disciplinar -->
+    <div id="modal-notificacao" class="modal-overlay" style="display:none;">
+      <div class="modal-card" style="max-width:680px;">
+        <h3>Gerar notificação de medida disciplinar</h3>
+        <p class="muted" style="font-size:13px; margin-bottom:14px;">Revise e ajuste o texto sugerido. O número e o cabeçalho da notificação serão gerados automaticamente no SUAP a partir deste documento.</p>
+
+        <label for="not-data">Data do documento</label>
+        <input type="date" id="not-data" style="max-width:220px;">
+
+        <label for="not-texto-principal">Texto da notificação</label>
+        <textarea id="not-texto-principal" rows="5"></textarea>
+
+        <label for="not-fundamentacao">Fundamentação (incisos infringidos)</label>
+        <textarea id="not-fundamentacao" rows="3"></textarea>
+
+        <label for="not-considerandos">Considerações adicionais (opcional — reincidência, agravantes etc.)</label>
+        <textarea id="not-considerandos" rows="3" placeholder="Ex.: Considerando o histórico do discente, que já possui registro anterior..."></textarea>
+
+        <div class="linha-form">
+          <div>
+            <label for="not-tipo-falta">Tipo de falta disciplinar</label>
+            <input type="text" id="not-tipo-falta">
+          </div>
+          <div>
+            <label for="not-medida">Medida disciplinar</label>
+            <input type="text" id="not-medida">
+          </div>
+        </div>
+
+        <label for="not-rodape">Texto final (regra de reincidência)</label>
+        <textarea id="not-rodape" rows="2"></textarea>
+
+        <div class="linha-resumo" style="margin-top:16px;">
+          <button id="btn-cancelar-notificacao">Cancelar</button>
+          <button id="btn-ver-previa-notificacao" class="btn-primario" style="margin-top:0;">Visualizar prévia</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal de prévia da notificação -->
+    <div id="modal-previa-notificacao" class="modal-overlay" style="display:none;">
+      <div class="modal-card" style="max-width:680px;">
+        <h3>Prévia da notificação</h3>
+        <div id="previa-documento" class="previa-documento"></div>
+        <div class="linha-resumo" style="margin-top:16px; flex-wrap:wrap;">
+          <button id="btn-voltar-editar-notificacao">Voltar e editar</button>
+          <button id="btn-imprimir-notificacao">🖶 Imprimir</button>
+          <button id="btn-copiar-notificacao">Copiar texto</button>
+          <button id="btn-baixar-notificacao" class="btn-primario" style="margin-top:0;">Baixar .docx</button>
+        </div>
+        <p class="msg" id="msg-previa-notificacao"></p>
+      </div>
+    </div>
+
+    <!-- Modal de resolução de alerta -->
+    <div id="modal-alerta" class="modal-overlay" style="display:none;">
+      <div class="modal-card">
+        <h3>Resolver alerta</h3>
+        <p class="muted" id="alerta-descricao" style="font-size:13px; margin-bottom:14px;"></p>
+        <input type="hidden" id="alerta-matricula">
+        <input type="hidden" id="alerta-nome">
+        <input type="hidden" id="alerta-tipo">
+
+        <label for="alerta-acao">Ação tomada</label>
+        <select id="alerta-acao"></select>
+
+        <label for="alerta-data">Data da ação</label>
+        <input type="date" id="alerta-data">
+
+        <label for="alerta-obs">Observação (opcional)</label>
+        <textarea id="alerta-obs" rows="3" placeholder="Detalhes adicionais sobre a providência..."></textarea>
+
+        <div class="linha-resumo" style="margin-top:16px;">
+          <button id="btn-cancelar-alerta">Cancelar</button>
+          <button id="btn-confirmar-alerta" class="btn-primario" style="margin-top:0;">Confirmar resolução</button>
+        </div>
+        <p class="msg" id="msg-alerta"></p>
+      </div>
     </div>
 
     <!-- Modal de convite de usuário -->

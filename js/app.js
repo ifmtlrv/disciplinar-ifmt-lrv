@@ -16,8 +16,8 @@ function formatarData(iso) {
 // -------------------- Telas --------------------
 
 function mostrarTela(tela) {
-  const exibicao = { "tela-login": "flex", "tela-pendente": "flex", "tela-app": "block" };
-  ["tela-login", "tela-pendente", "tela-app"].forEach((id) => {
+  const exibicao = { "tela-login": "flex", "tela-pendente": "flex", "tela-definir-senha": "flex", "tela-app": "block" };
+  ["tela-login", "tela-pendente", "tela-definir-senha", "tela-app"].forEach((id) => {
     el(id).style.display = id === tela ? exibicao[id] : "none";
   });
 }
@@ -400,7 +400,7 @@ async function renderizarPainelAluno(matricula) {
     html += `<div class="caixa-alerta ${classe}">
       <i class="ti ti-alert-triangle"></i>
       <span style="flex:1;">${sit.alerta.msg}</span>
-      <button id="btn-resolver-alerta" style="flex-shrink:0;">Registrar resolução</button>
+      <button id="btn-resolver-alerta" style="flex-shrink:0;">Resolver</button>
     </div>`;
   } else if (sit.alerta && resolvido) {
     const resolucao = cacheResolucoesAlertas.find((r) => r.matricula === matricula);
@@ -568,7 +568,7 @@ function renderizarGraficos(ocorrencias, grupos) {
     type: "bar",
     data: {
       labels: cursosLabels,
-      datasets: [{ label: "Ocorrências", data: cursosValores, backgroundColor: "#1B6B45" }]
+      datasets: [{ label: "Ocorrências", data: cursosValores, backgroundColor: "#F2B705" }]
     },
     options: {
       plugins: { legend: { display: false } },
@@ -977,11 +977,49 @@ document.addEventListener("DOMContentLoaded", async () => {
   el("tab-admin").addEventListener("click", () => mostrarAba("admin"));
   el("btn-sair").addEventListener("click", sair);
   el("btn-sair-pendente").addEventListener("click", sair);
+  configurarFormularioDefinirSenha();
 
   const { data: sessao } = await supabaseClient.auth.getSession();
-  if (sessao.session) {
+  if (sessao.session && detectarFluxoDefinirSenha()) {
+    mostrarTela("tela-definir-senha");
+  } else if (sessao.session) {
     await iniciarAposLogin();
   } else {
     mostrarTela("tela-login");
   }
 });
+
+function configurarFormularioDefinirSenha() {
+  el("form-definir-senha").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const msg = el("msg-definir-senha");
+    const senha = el("nova-senha").value;
+    const confirmar = el("nova-senha-confirmar").value;
+
+    if (senha.length < 6) {
+      msg.textContent = "A senha deve ter pelo menos 6 caracteres.";
+      msg.className = "msg msg-erro";
+      return;
+    }
+    if (senha !== confirmar) {
+      msg.textContent = "As senhas não coincidem.";
+      msg.className = "msg msg-erro";
+      return;
+    }
+
+    msg.textContent = "Salvando...";
+    msg.className = "msg";
+
+    const { error } = await definirNovaSenha(senha);
+    if (error) {
+      msg.textContent = "Erro ao salvar senha: " + error.message;
+      msg.className = "msg msg-erro";
+      return;
+    }
+
+    msg.textContent = "Senha definida com sucesso! Entrando...";
+    msg.className = "msg msg-sucesso";
+    history.replaceState(null, "", window.location.pathname);
+    setTimeout(() => iniciarAposLogin(), 800);
+  });
+}
