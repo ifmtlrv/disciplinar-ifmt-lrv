@@ -51,14 +51,17 @@ function mostrarTela(tela) {
   });
 }
 
-function mostrarAba(aba) {
+function mostrarAba(aba, matriculaForcada) {
   ["lanc", "painel", "todos", "admin"].forEach((a) => {
     el("view-" + a).style.display = a === aba ? "block" : "none";
     el("tab-" + a).classList.toggle("active", a === aba);
   });
   if (aba === "lanc") renderizarListaOcorrencias();
-  if (aba === "painel") preencherSelectAlunos();
-  if (aba === "todos") renderizarVisaoGeral();
+  if (aba === "painel") preencherSelectAlunos(matriculaForcada);
+  if (aba === "todos") {
+    cardDetalheAtivo = null;
+    renderizarVisaoGeral();
+  }
   if (aba === "admin") renderizarAdministracao();
 }
 
@@ -301,8 +304,8 @@ function aplicarFiltroOcorrencias() {
   });
 }
 
-function abrirModalEdicao(id) {
-  const o = cacheOcorrencias.find((x) => x.id === id);
+function abrirModalEdicao(id, ocorrenciaConhecida) {
+  const o = ocorrenciaConhecida || cacheOcorrencias.find((x) => x.id === id);
   if (!o) return;
   el("edit-id").value = o.id;
   el("edit-nome").value = o.nome_discente;
@@ -321,18 +324,19 @@ function fecharModalEdicao() {
   el("modal-editar").style.display = "none";
 }
 
-async function confirmarExclusao(id) {
-  const o = cacheOcorrencias.find((x) => x.id === id);
-  if (!o) return;
+async function confirmarExclusao(id, ocorrenciaConhecida) {
+  const o = ocorrenciaConhecida || cacheOcorrencias.find((x) => x.id === id);
+  if (!o) return false;
   const ok = confirm(`Excluir a ocorrência de ${o.nome_discente} (${formatarData(o.data_falta)})? Esta ação será registrada no histórico e não pode ser desfeita pela interface.`);
-  if (!ok) return;
+  if (!ok) return false;
 
   const { error } = await excluirOcorrencia(id);
   if (error) {
     alert("Não foi possível excluir: " + error.message);
-    return;
+    return false;
   }
-  await renderizarListaOcorrencias();
+  if (el("ocorrencias-tbody")) await renderizarListaOcorrencias();
+  return true;
 }
 
 function configurarModalEdicao() {
@@ -366,7 +370,8 @@ function configurarModalEdicao() {
       return;
     }
     fecharModalEdicao();
-    await renderizarListaOcorrencias();
+    if (el("ocorrencias-tbody")) await renderizarListaOcorrencias();
+    if (el("p-select") && el("p-select").value) await renderizarPainelAluno(el("p-select").value);
   });
 }
 
@@ -375,7 +380,7 @@ function configurarModalEdicao() {
 let cacheGruposDiscentes = [];
 let cacheResolucoesAlertas = [];
 
-async function preencherSelectAlunos() {
+async function preencherSelectAlunos(matriculaForcada) {
   const { data } = await listarTodasOcorrencias();
   cacheGruposDiscentes = agruparPorDiscente(data);
   const { data: resolucoes } = await listarAlertasResolvidos();
@@ -389,6 +394,12 @@ async function preencherSelectAlunos() {
       mostrarTelaInicialPainel();
     }
   };
+
+  if (matriculaForcada && cacheGruposDiscentes.some((g) => g.matricula === matriculaForcada)) {
+    el("p-select").value = matriculaForcada;
+    renderizarPainelAluno(matriculaForcada);
+    return;
+  }
 
   const emAlerta = gruposEmAlertaNaoResolvido();
   if (emAlerta.length) {
@@ -437,11 +448,7 @@ function renderizarOpcoesDiscentes(grupos) {
 }
 
 function abrirPainelParaMatricula(matricula) {
-  mostrarAba("painel");
-  setTimeout(() => {
-    el("p-select").value = matricula;
-    renderizarPainelAluno(matricula);
-  }, 50);
+  mostrarAba("painel", matricula);
 }
 
 let cacheListaPainelAtual = [];
@@ -493,7 +500,7 @@ async function renderizarPainelAluno(matricula) {
   </div>`;
 
   html += `<table class="tabela"><thead><tr>
-      <th>Data</th><th>Inciso</th><th>Descrição</th><th>Nível</th><th>Registrado por</th><th>Notificação</th>
+      <th>Data</th><th>Inciso</th><th>Descrição</th><th>Nível</th><th>Registrado por</th><th>Visualizar</th>
     </tr></thead><tbody>`;
   lista.forEach((o) => {
     html += `<tr>
@@ -502,15 +509,15 @@ async function renderizarPainelAluno(matricula) {
       <td>${o.descricao || "—"}</td>
       <td>${badge(o.nivel)}</td>
       <td class="muted">${o.registrado_por_nome || "—"}</td>
-      <td><button class="acao-btn acao-editar btn-gerar-notificacao" data-id="${o.id}">Gerar notificação</button></td>
+      <td><span class="link-discente btn-visualizar-ocorrencia" data-id="${o.id}">Visualizar</span></td>
     </tr>`;
   });
   html += `</tbody></table>`;
   cont.innerHTML = html;
 
   el("btn-imprimir-painel").addEventListener("click", () => imprimirOcorrenciasDiscente(lista, sit));
-  cont.querySelectorAll(".btn-gerar-notificacao").forEach((btn) => {
-    btn.addEventListener("click", () => abrirModalNotificacao(btn.dataset.id, lista));
+  cont.querySelectorAll(".btn-visualizar-ocorrencia").forEach((spanEl) => {
+    spanEl.addEventListener("click", () => abrirModalVisualizar(spanEl.dataset.id, lista));
   });
   const btnResolver = el("btn-resolver-alerta");
   if (btnResolver) btnResolver.addEventListener("click", () => abrirModalAlerta(alertaAtualPainel));
@@ -735,7 +742,7 @@ function renderizarGraficos(ocorrencias, grupos, qtdAlertaAtivo, qtdAlertaResolv
     type: "bar",
     data: {
       labels: cursosLabels,
-      datasets: [{ label: "Ocorrências", data: cursosValores, backgroundColor: "#888780" }]
+      datasets: [{ label: "Ocorrências", data: cursosValores, backgroundColor: "#5DCAA5" }]
     },
     options: {
       plugins: {
@@ -791,12 +798,12 @@ function renderizarGraficoPeriodo(ocorrencias) {
   });
 
   const anos = Object.keys(porAnoMes).sort();
-  const tonsCinza = ["#5F5E5A", "#888780", "#B4B2A9", "#D3D1C7"];
-  // Ano mais recente fica com o cinza mais escuro; anos anteriores ficam progressivamente mais claros.
+  const tonsTeal = ["#0F6E56", "#1D9E75", "#5DCAA5", "#9FE1CB"];
+  // Ano mais recente fica com o teal mais escuro; anos anteriores ficam progressivamente mais claros.
   const datasets = anos.map((ano, i) => ({
     label: ano,
     data: porAnoMes[ano],
-    backgroundColor: tonsCinza[(anos.length - 1 - i) % tonsCinza.length]
+    backgroundColor: tonsTeal[(anos.length - 1 - i) % tonsTeal.length]
   }));
 
   const ctxPeriodo = el("grafico-periodo").getContext("2d");
@@ -1107,6 +1114,67 @@ function fecharModalAlerta() {
   el("modal-alerta").style.display = "none";
 }
 
+// -------------------- Visualizar ocorrência --------------------
+
+let ocorrenciaVisualizando = null;
+let listaVisualizando = [];
+
+function abrirModalVisualizar(id, lista) {
+  const o = lista.find((x) => x.id === id);
+  if (!o) return;
+  ocorrenciaVisualizando = o;
+  listaVisualizando = lista;
+
+  el("visualizar-conteudo").innerHTML = `
+    <div class="detalhe-linha"><span class="detalhe-label">Discente</span><span class="detalhe-valor">${o.nome_discente}</span></div>
+    <div class="detalhe-linha"><span class="detalhe-label">Matrícula</span><span class="detalhe-valor">${o.matricula}</span></div>
+    <div class="detalhe-linha"><span class="detalhe-label">Curso</span><span class="detalhe-valor">${o.curso}</span></div>
+    <div class="detalhe-linha"><span class="detalhe-label">Data</span><span class="detalhe-valor">${formatarData(o.data_falta)}</span></div>
+    <div class="detalhe-linha"><span class="detalhe-label">Inciso</span><span class="detalhe-valor">Art. 11, ${o.inciso}</span></div>
+    <div class="detalhe-linha"><span class="detalhe-label">Nível</span><span class="detalhe-valor">${badge(o.nivel)}</span></div>
+    <div class="detalhe-linha"><span class="detalhe-label">Descrição</span><span class="detalhe-valor">${o.descricao || "—"}</span></div>
+    <div class="detalhe-linha"><span class="detalhe-label">Menor de idade</span><span class="detalhe-valor">${o.menor_idade ? "Sim" : "Não"}</span></div>
+    <div class="detalhe-linha"><span class="detalhe-label">Registrado por</span><span class="detalhe-valor">${o.registrado_por_nome || "—"}</span></div>`;
+
+  const podeGerenciar = usuarioAtual.papel === "admin" || o.registrado_por === usuarioAtual.id;
+  el("btn-visualizar-editar").style.display = podeGerenciar ? "inline-block" : "none";
+  el("btn-visualizar-excluir").style.display = podeGerenciar ? "inline-block" : "none";
+
+  el("modal-visualizar").style.display = "flex";
+}
+
+function fecharModalVisualizar() {
+  el("modal-visualizar").style.display = "none";
+}
+
+function configurarModalVisualizar() {
+  el("btn-fechar-visualizar").addEventListener("click", fecharModalVisualizar);
+  el("modal-visualizar").addEventListener("click", (e) => {
+    if (e.target.id === "modal-visualizar") fecharModalVisualizar();
+  });
+
+  el("btn-visualizar-notificacao").addEventListener("click", () => {
+    if (!ocorrenciaVisualizando) return;
+    fecharModalVisualizar();
+    abrirModalNotificacao(ocorrenciaVisualizando.id, listaVisualizando);
+  });
+
+  el("btn-visualizar-editar").addEventListener("click", () => {
+    if (!ocorrenciaVisualizando) return;
+    fecharModalVisualizar();
+    abrirModalEdicao(ocorrenciaVisualizando.id, ocorrenciaVisualizando);
+  });
+
+  el("btn-visualizar-excluir").addEventListener("click", async () => {
+    if (!ocorrenciaVisualizando) return;
+    const matricula = ocorrenciaVisualizando.matricula;
+    const ocorrenciaParaExcluir = ocorrenciaVisualizando;
+    fecharModalVisualizar();
+    const excluiu = await confirmarExclusao(ocorrenciaParaExcluir.id, ocorrenciaParaExcluir);
+    if (excluiu) renderizarPainelAluno(matricula);
+  });
+}
+
 function configurarModalAlerta() {
   el("btn-cancelar-alerta").addEventListener("click", () => confirmarFecharComAlteracoes(fecharModalAlerta));
   el("modal-alerta").addEventListener("click", (e) => {
@@ -1242,6 +1310,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   configurarFormularioLancamento();
   configurarImportacaoLote();
   configurarModalEdicao();
+  configurarModalVisualizar();
   configurarModalNotificacao();
   configurarModalAlerta();
   configurarModalConvite();

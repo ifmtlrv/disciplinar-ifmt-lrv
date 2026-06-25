@@ -482,6 +482,24 @@ button:hover { background: var(--fundo); }
 }
 
 .previa-documento p { margin: 0 0 12px; text-align: justify; }
+
+.detalhe-linha {
+  display: flex;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--bd);
+}
+.detalhe-linha:last-child { border-bottom: none; }
+.detalhe-linha .detalhe-label {
+  flex-shrink: 0;
+  width: 130px;
+  font-weight: 700;
+  color: var(--verde2);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+.detalhe-linha .detalhe-valor { flex: 1; }
 .previa-documento .campo-label { font-weight: 700; }
 .previa-documento .rodape-italico { font-style: italic; margin-top: 16px; }
 
