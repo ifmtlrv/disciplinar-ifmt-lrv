@@ -610,24 +610,6 @@ async function renderizarVisaoGeral() {
     renderizarDetalheCard(cardDetalheAtivo);
   }
 
-  el("todos-tbody").innerHTML = grupos
-    .map((g) => {
-      let situacao = "Regular";
-      if (g.sit.alerta) situacao = grupoEstaResolvido(g) ? "Alerta resolvido" : "Requer atenção";
-      return `<tr>
-      <td><span class="link-discente" data-matricula="${g.matricula}">${g.nome}</span></td>
-      <td class="muted">${g.curso}</td>
-      <td>${g.ocorrencias.length}</td>
-      <td>${badge(g.sit.nivelAtual)}</td>
-      <td class="muted">${situacao}</td>
-    </tr>`;
-    })
-    .join("");
-
-  el("todos-tbody").querySelectorAll(".link-discente").forEach((spanEl) => {
-    spanEl.addEventListener("click", () => abrirPainelParaMatricula(spanEl.dataset.matricula));
-  });
-
   renderizarGraficos(data, grupos, gruposComAlertaAtivo.length, gruposComAlertaResolvido.length);
 }
 
@@ -753,7 +735,7 @@ function renderizarGraficos(ocorrencias, grupos, qtdAlertaAtivo, qtdAlertaResolv
     type: "bar",
     data: {
       labels: cursosLabels,
-      datasets: [{ label: "Ocorrências", data: cursosValores, backgroundColor: "#F2B705" }]
+      datasets: [{ label: "Ocorrências", data: cursosValores, backgroundColor: "#888780" }]
     },
     options: {
       plugins: {
@@ -809,11 +791,12 @@ function renderizarGraficoPeriodo(ocorrencias) {
   });
 
   const anos = Object.keys(porAnoMes).sort();
-  const coresPorAno = ["#888780", "#7F77DD", "#1D9E75", "#D85A30"];
+  const tonsCinza = ["#5F5E5A", "#888780", "#B4B2A9", "#D3D1C7"];
+  // Ano mais recente fica com o cinza mais escuro; anos anteriores ficam progressivamente mais claros.
   const datasets = anos.map((ano, i) => ({
     label: ano,
     data: porAnoMes[ano],
-    backgroundColor: coresPorAno[i % coresPorAno.length]
+    backgroundColor: tonsCinza[(anos.length - 1 - i) % tonsCinza.length]
   }));
 
   const ctxPeriodo = el("grafico-periodo").getContext("2d");
