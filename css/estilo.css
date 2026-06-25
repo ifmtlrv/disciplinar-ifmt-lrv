@@ -608,6 +608,22 @@ textarea { resize: vertical; line-height: 1.55; }
   justify-content: flex-start;
 }
 
+.card-metric.clicavel {
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.card-metric.clicavel:hover {
+  border-color: var(--verde);
+  box-shadow: 0 2px 8px rgba(27,107,69,0.12);
+}
+
+.card-metric.clicavel.selecionado {
+  border-color: var(--verde);
+  border-width: 2px;
+  background: var(--verde3);
+}
+
 .metric-label {
   font-size: 14.3px;
   color: var(--muted);

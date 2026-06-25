@@ -567,6 +567,9 @@ function imprimirOcorrenciasDiscente(lista, sit) {
 
 // -------------------- Visão geral --------------------
 
+let cacheGruposVisaoGeral = [];
+let cardDetalheAtivo = null;
+
 async function renderizarVisaoGeral() {
   const { data } = await listarTodasOcorrencias();
   const grupos = agruparPorDiscente(data).map((g) => ({ ...g, sit: calcularSituacao(g.ocorrencias) }));
@@ -584,26 +587,28 @@ async function renderizarVisaoGeral() {
 
   const gruposComAlertaAtivo = grupos.filter((g) => g.sit.alerta && !grupoEstaResolvido(g));
   const gruposComAlertaResolvido = grupos.filter((g) => g.sit.alerta && grupoEstaResolvido(g));
+  const gruposRiscoDesligamento = grupos.filter((g) => g.sit.nivelAtual === "gravissima");
+
+  cacheGruposVisaoGeral = { grupos, gruposComAlertaAtivo, gruposComAlertaResolvido, gruposRiscoDesligamento, totalOcorrencias: data.length, grupoEstaResolvido };
 
   const totalAlunos = grupos.length;
   const totalOcorr = data.length;
   const emAlerta = gruposComAlertaAtivo.length;
-  const gravissimas = grupos.filter((g) => g.sit.nivelAtual === "gravissima").length;
+  const gravissimas = gruposRiscoDesligamento.length;
 
   el("todos-resumo").innerHTML = `
-    <div class="card-metric"><div class="metric-label">Discentes monitorados</div><div class="metric-valor">${totalAlunos}</div></div>
-    <div class="card-metric"><div class="metric-label">Ocorrências totais</div><div class="metric-valor">${totalOcorr}</div></div>
-    <div class="card-metric"><div class="metric-label">Em alerta de progressão</div><div class="metric-valor">${emAlerta}</div></div>
-    <div class="card-metric"><div class="metric-label">Risco de desligamento</div><div class="metric-valor">${gravissimas}</div></div>`;
+    <div class="card-metric clicavel" data-card="discentes"><div class="metric-label">Discentes monitorados</div><div class="metric-valor">${totalAlunos}</div></div>
+    <div class="card-metric clicavel" data-card="ocorrencias"><div class="metric-label">Ocorrências totais</div><div class="metric-valor">${totalOcorr}</div></div>
+    <div class="card-metric clicavel" data-card="alerta"><div class="metric-label">Em alerta de progressão</div><div class="metric-valor">${emAlerta}</div></div>
+    <div class="card-metric clicavel" data-card="risco"><div class="metric-label">Risco de desligamento</div><div class="metric-valor">${gravissimas}</div></div>`;
 
-  el("todos-alertas").innerHTML = gruposComAlertaAtivo.length
-    ? gruposComAlertaAtivo
-        .map((g) => {
-          const classe = g.sit.alerta.tipo.includes("gravissima") || g.sit.alerta.tipo.includes("grave_para") ? "alerta-critico" : "alerta-atencao";
-          return `<div class="caixa-alerta ${classe}"><i class="ti ti-alert-triangle"></i><span><strong>${g.nome}</strong> (${g.matricula}) — ${g.sit.alerta.msg}</span></div>`;
-        })
-        .join("")
-    : '<p class="muted">Nenhum aluno em situação de alerta no momento.</p>';
+  el("todos-resumo").querySelectorAll(".card-metric.clicavel").forEach((cardEl) => {
+    cardEl.addEventListener("click", () => alternarDetalheCard(cardEl.dataset.card));
+  });
+
+  if (cardDetalheAtivo) {
+    renderizarDetalheCard(cardDetalheAtivo);
+  }
 
   el("todos-tbody").innerHTML = grupos
     .map((g) => {
@@ -624,6 +629,75 @@ async function renderizarVisaoGeral() {
   });
 
   renderizarGraficos(data, grupos, gruposComAlertaAtivo.length, gruposComAlertaResolvido.length);
+}
+
+function alternarDetalheCard(tipo) {
+  cardDetalheAtivo = cardDetalheAtivo === tipo ? null : tipo;
+  el("todos-resumo").querySelectorAll(".card-metric.clicavel").forEach((cardEl) => {
+    cardEl.classList.toggle("selecionado", cardEl.dataset.card === cardDetalheAtivo);
+  });
+  if (cardDetalheAtivo) {
+    renderizarDetalheCard(cardDetalheAtivo);
+  } else {
+    el("todos-detalhe-card").style.display = "none";
+  }
+}
+
+function linhaDiscenteDetalhe(g, infoExtra) {
+  return `<div class="linha-resumo" style="border-bottom:1px solid var(--bd); padding-bottom:8px; margin-bottom:8px;">
+    <span class="link-discente" data-matricula="${g.matricula}">${g.nome}</span>
+    <span class="muted">${g.curso}</span>
+    <span style="margin-left:auto;">${infoExtra || ""}</span>
+  </div>`;
+}
+
+function renderizarDetalheCard(tipo) {
+  const { grupos, gruposComAlertaAtivo, gruposRiscoDesligamento } = cacheGruposVisaoGeral;
+  const container = el("todos-detalhe-card");
+  let titulo = "";
+  let conteudo = "";
+
+  if (tipo === "discentes") {
+    titulo = "Discentes monitorados";
+    conteudo = grupos.length
+      ? grupos
+          .slice()
+          .sort((a, b) => b.ocorrencias.length - a.ocorrencias.length)
+          .map((g) => linhaDiscenteDetalhe(g, `${g.ocorrencias.length} ocorrência(s)`))
+          .join("")
+      : '<p class="muted">Nenhum discente monitorado ainda.</p>';
+  } else if (tipo === "ocorrencias") {
+    titulo = "Ocorrências totais — por discente";
+    conteudo = grupos.length
+      ? grupos
+          .slice()
+          .sort((a, b) => b.ocorrencias.length - a.ocorrencias.length)
+          .map((g) => linhaDiscenteDetalhe(g, badge(g.sit.nivelAtual)))
+          .join("")
+      : '<p class="muted">Nenhuma ocorrência registrada ainda.</p>';
+  } else if (tipo === "alerta") {
+    titulo = "Discentes em alerta de progressão";
+    conteudo = gruposComAlertaAtivo.length
+      ? gruposComAlertaAtivo
+          .map((g) => {
+            const classe = g.sit.alerta.tipo.includes("gravissima") || g.sit.alerta.tipo.includes("grave_para") ? "alerta-critico" : "alerta-atencao";
+            return `<div class="caixa-alerta ${classe}"><i class="ti ti-alert-triangle"></i><span><span class="link-discente" data-matricula="${g.matricula}">${g.nome}</span> (${g.matricula}) — ${g.sit.alerta.msg}</span></div>`;
+          })
+          .join("")
+      : '<p class="muted">Nenhum aluno em situação de alerta no momento.</p>';
+  } else if (tipo === "risco") {
+    titulo = "Discentes em risco de desligamento (nível gravíssimo)";
+    conteudo = gruposRiscoDesligamento.length
+      ? gruposRiscoDesligamento.map((g) => linhaDiscenteDetalhe(g, `${g.ocorrencias.length} ocorrência(s)`)).join("")
+      : '<p class="muted">Nenhum discente em risco de desligamento no momento.</p>';
+  }
+
+  container.innerHTML = `<div class="pei-card-title">${titulo}</div>${conteudo}`;
+  container.style.display = "block";
+
+  container.querySelectorAll(".link-discente").forEach((spanEl) => {
+    spanEl.addEventListener("click", () => abrirPainelParaMatricula(spanEl.dataset.matricula));
+  });
 }
 
 let graficoNiveis = null;
