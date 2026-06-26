@@ -670,9 +670,10 @@ textarea { resize: vertical; line-height: 1.55; }
 }
 
 .acoes-grafico button {
-  padding: 5px 9px;
-  font-size: 14px;
-  line-height: 1;
+  padding: 6px 14px;
+  font-size: 13px;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
 .metric-label {

@@ -746,43 +746,21 @@ document.addEventListener("click", (e) => {
   fecharTodosDetalhesGraficos();
 });
 
-function imprimirGrafico(idCanvas, titulo) {
-  const canvasEl = el(idCanvas);
-  const imagemDataUrl = canvasEl.toDataURL("image/png");
-  const janela = window.open("", "_blank");
-  janela.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
-    <title>${titulo}</title>
-    <style>
-      body { font-family: Arial, sans-serif; padding: 30px; text-align: center; }
-      h1 { font-size: 16px; color: #1B6B45; margin-bottom: 20px; }
-      img { max-width: 100%; }
-    </style></head><body>
-      <h1>${titulo}</h1>
-      <img src="${imagemDataUrl}">
-    </body></html>`);
-  janela.document.close();
-  janela.focus();
-  setTimeout(() => janela.print(), 300);
-}
-
 async function copiarGraficoComoImagem(idCanvas, botaoEl) {
   const canvasEl = el(idCanvas);
+  const textoOriginal = botaoEl.textContent;
   try {
     const blob = await new Promise((resolve) => canvasEl.toBlob(resolve, "image/png"));
     await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
     mostrarToast("Imagem do gráfico copiada. Você já pode colar em outro programa.", "sucesso");
+    botaoEl.textContent = "Copiado!";
+    setTimeout(() => { botaoEl.textContent = textoOriginal; }, 2000);
   } catch (e) {
     mostrarToast("Não foi possível copiar a imagem automaticamente neste navegador.", "erro");
   }
 }
 
 function configurarAcoesGraficos() {
-  document.querySelectorAll(".btn-grafico-imprimir").forEach((btn) => {
-    btn.onclick = (e) => {
-      e.stopPropagation();
-      imprimirGrafico(btn.dataset.canvas, btn.dataset.titulo);
-    };
-  });
   document.querySelectorAll(".btn-grafico-copiar").forEach((btn) => {
     btn.onclick = (e) => {
       e.stopPropagation();
@@ -848,7 +826,7 @@ function renderizarGraficos(ocorrencias, grupos, qtdAlertaAtivo, qtdAlertaResolv
     type: "bar",
     data: {
       labels: cursosLabels,
-      datasets: [{ label: "Ocorrências", data: cursosValores, backgroundColor: "#A8DADC" }]
+      datasets: [{ label: "Ocorrências", data: cursosValores, backgroundColor: "#A67451" }]
     },
     options: {
       plugins: {
@@ -924,12 +902,12 @@ function renderizarGraficoPeriodo(ocorrencias) {
   });
 
   const anos = Object.keys(porAnoMes).sort();
-  const tonsAzulClaro = ["#7FC4C7", "#A8DADC", "#C3E6E7", "#D6EDEE"];
+  const tonsTerracota = ["#854A2C", "#A67451", "#C49A76", "#DCC0A8"];
   // Ano mais recente fica com o tom mais forte; anos anteriores ficam progressivamente mais claros.
   const datasets = anos.map((ano, i) => ({
     label: ano,
     data: porAnoMes[ano],
-    backgroundColor: tonsAzulClaro[(anos.length - 1 - i) % tonsAzulClaro.length]
+    backgroundColor: tonsTerracota[(anos.length - 1 - i) % tonsTerracota.length]
   }));
 
   const ctxPeriodo = el("grafico-periodo").getContext("2d");

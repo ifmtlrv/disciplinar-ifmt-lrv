@@ -21,8 +21,8 @@ function sugerirTextoNotificacao(o) {
     `especificamente o Art. 11, inciso ${o.inciso} — ${info[1]}.`;
 
   const rodape =
-    `Esta falta disciplinar será incluída na Ficha Individual do(a) Discente para registro. Casos de reincidência poderão implicar em medida disciplinar de grau maior. ` +
-    `Não havendo reincidência em faltas leves e médias, o(a) discente retornará à condição de primariedade no prazo de 01 (um) ano.`;
+    `Esta falta disciplinar será incluída na Ficha Individual do(a) Discente para registro. Casos de reincidência poderão implicar em medida disciplinar de grau maior, ` +
+    `sendo consideradas, para esse fim, as infrações cometidas durante todo o período de vínculo do(a) discente com a Instituição, de forma cumulativa (Art. 16, §5º do Regulamento Disciplinar Discente).`;
 
   return {
     textoPrincipal,
