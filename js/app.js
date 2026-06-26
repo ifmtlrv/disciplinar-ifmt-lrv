@@ -829,16 +829,17 @@ async function gerarImagemGraficoComMoldura(idCanvas, tituloGrafico) {
   ctx.fillStyle = "#0D1B2A";
   ctx.fillRect(0, 0, larguraFinal, alturaCabecalho);
   if (logoImg) {
-    const logoAltura = 44;
-    const logoLargura = (logoImg.width / logoImg.height) * logoAltura;
+    const logoAltura = 32;
+    const proporcaoLogo = 744.65 / 253.4;
+    const logoLargura = proporcaoLogo * logoAltura;
     ctx.drawImage(logoImg, 24, (alturaCabecalho - logoAltura) / 2, logoLargura, logoAltura);
   }
   ctx.fillStyle = "#ffffff";
   ctx.font = "bold 16px Arial";
-  ctx.fillText("Controle Disciplinar Discente", 90, 38);
+  ctx.fillText("Controle Disciplinar Discente", 145, 38);
   ctx.fillStyle = "rgba(255,255,255,0.7)";
   ctx.font = "12px Arial";
-  ctx.fillText("Resolução 113/2025 RTR-CONSUP/RTR/IFMT", 90, 56);
+  ctx.fillText("Resolução 113/2025 RTR-CONSUP/RTR/IFMT", 145, 56);
 
   ctx.fillStyle = "#1B6B45";
   ctx.font = "bold 16px Arial";
