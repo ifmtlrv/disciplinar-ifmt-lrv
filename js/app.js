@@ -547,7 +547,38 @@ async function renderizarPainelAluno(matricula) {
   if (btnResolver) btnResolver.addEventListener("click", () => abrirModalAlerta(alertaAtualPainel));
 }
 
-function imprimirOcorrenciasDiscente(lista, sit) {
+let cacheLogoSvgInline = null;
+
+async function obterLogoSvgInline() {
+  if (cacheLogoSvgInline) return cacheLogoSvgInline;
+  try {
+    const resp = await fetch("assets/logo-ifmt.svg");
+    cacheLogoSvgInline = await resp.text();
+  } catch (e) {
+    cacheLogoSvgInline = "";
+  }
+  return cacheLogoSvgInline;
+}
+
+async function gerarCabecalhoInstitucional() {
+  const logoSvg = await obterLogoSvgInline();
+  return `<div class="cabecalho-institucional">
+    <div class="cabecalho-logo">${logoSvg}</div>
+    <div class="cabecalho-titulos">
+      <h1>Controle Disciplinar Discente</h1>
+      <p>Resolução 113/2025 RTR-CONSUP/RTR/IFMT</p>
+    </div>
+  </div>`;
+}
+
+const CSS_CABECALHO_INSTITUCIONAL = `
+  .cabecalho-institucional { display:flex; align-items:center; gap:18px; background:#0D1B2A; padding:14px 24px; margin:-30px -30px 24px -30px; }
+  .cabecalho-logo svg { height:50px; width:auto; display:block; }
+  .cabecalho-titulos h1 { font-size:16px; color:#fff; margin:0; font-weight:700; }
+  .cabecalho-titulos p { font-size:12px; color:rgba(255,255,255,0.65); margin:2px 0 0; }
+`;
+
+async function imprimirOcorrenciasDiscente(lista, sit) {
   const primeira = lista[0];
   const linhas = lista
     .map(
@@ -561,20 +592,25 @@ function imprimirOcorrenciasDiscente(lista, sit) {
     )
     .join("");
 
+  const cabecalho = await gerarCabecalhoInstitucional();
+  const agora = new Date();
+  const dataExportacao = agora.toLocaleDateString("pt-BR") + " às " + agora.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+
   const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Ficha Individual do Discente — ${primeira.nome_discente}</title>
   <style>
-    body { font-family: Arial, sans-serif; color:#222; padding: 30px; }
-    h1 { font-size: 18px; margin-bottom: 4px; }
+    body { font-family: Arial, sans-serif; color:#222; padding: 30px; margin: 0; }
+    ${CSS_CABECALHO_INSTITUCIONAL}
+    h2 { font-size: 16px; margin: 0 0 4px; color:#1B6B45; }
     .sub { color:#555; font-size: 13px; margin-bottom: 20px; }
     table { width:100%; border-collapse: collapse; font-size: 12.5px; }
     th, td { border: 1px solid #999; padding: 6px 8px; text-align: left; }
     th { background: #1B6B45; color: #fff; }
     .resumo { margin-bottom: 16px; font-size: 13px; }
-    .rodape { margin-top: 30px; font-size: 11px; color: #666; }
+    .rodape { margin-top: 30px; font-size: 11px; color: #666; border-top: 1px solid #ddd; padding-top: 10px; text-align: center; }
   </style>
   </head><body>
-    <h1>IFMT — Campus Lucas do Rio Verde</h1>
-    <div class="sub">Ficha Individual do Discente — Resolução 113/2025 RTR-CONSUP/RTR/IFMT</div>
+    ${cabecalho}
+    <h2>Ficha Individual do Discente</h2>
     <div class="resumo">
       <strong>Discente:</strong> ${primeira.nome_discente}<br>
       <strong>Matrícula:</strong> ${primeira.matricula}<br>
@@ -586,7 +622,7 @@ function imprimirOcorrenciasDiscente(lista, sit) {
       <thead><tr><th>Data</th><th>Inciso</th><th>Descrição</th><th>Nível</th><th>Registrado por</th></tr></thead>
       <tbody>${linhas}</tbody>
     </table>
-    <div class="rodape">Documento gerado pelo sistema de Controle Disciplinar Discente em ${new Date().toLocaleDateString("pt-BR")}.</div>
+    <div class="rodape">Sistema de Controle Disciplinar Discente — IFMT Campus Lucas do Rio Verde<br>Documento exportado em ${dataExportacao}</div>
   </body></html>`;
 
   const janela = window.open("", "_blank");
@@ -746,11 +782,88 @@ document.addEventListener("click", (e) => {
   fecharTodosDetalhesGraficos();
 });
 
+function carregarLogoComoImagem() {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = "assets/logo-ifmt.svg";
+  });
+}
+
+function descricaoPeriodoGrafico(idCanvas) {
+  if (idCanvas === "grafico-periodo") return "Comparativo mensal entre os anos exibidos";
+  if (idCanvas === "grafico-niveis") return "Distribuição de todas as ocorrências registradas, por nível de gravidade";
+  if (idCanvas === "grafico-cursos") return "Total de ocorrências registradas, por curso";
+  if (idCanvas === "grafico-alertas") return "Discentes com alerta de progressão, ativos x resolvidos";
+  return "";
+}
+
+async function gerarImagemGraficoComMoldura(idCanvas, tituloGrafico) {
+  const canvasOriginal = el(idCanvas);
+  const logoImg = await carregarLogoComoImagem();
+
+  const larguraFinal = Math.max(canvasOriginal.width, 640);
+  const alturaCabecalho = 90;
+  const alturaRodape = 60;
+  const padding = 24;
+  const alturaGrafico = canvasOriginal.height;
+  const alturaFinal = alturaCabecalho + alturaGrafico + alturaRodape + padding * 2;
+
+  const canvasFinal = document.createElement("canvas");
+  canvasFinal.width = larguraFinal;
+  canvasFinal.height = alturaFinal;
+  const ctx = canvasFinal.getContext("2d");
+
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, larguraFinal, alturaFinal);
+
+  ctx.fillStyle = "#0D1B2A";
+  ctx.fillRect(0, 0, larguraFinal, alturaCabecalho);
+  if (logoImg) {
+    const logoAltura = 44;
+    const logoLargura = (logoImg.width / logoImg.height) * logoAltura;
+    ctx.drawImage(logoImg, 24, (alturaCabecalho - logoAltura) / 2, logoLargura, logoAltura);
+  }
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "bold 16px Arial";
+  ctx.fillText("Controle Disciplinar Discente", 90, 38);
+  ctx.fillStyle = "rgba(255,255,255,0.7)";
+  ctx.font = "12px Arial";
+  ctx.fillText("Resolução 113/2025 RTR-CONSUP/RTR/IFMT", 90, 56);
+
+  ctx.fillStyle = "#1B6B45";
+  ctx.font = "bold 14px Arial";
+  ctx.fillText(tituloGrafico, padding, alturaCabecalho + 22);
+  ctx.fillStyle = "#777777";
+  ctx.font = "11px Arial";
+  ctx.fillText(descricaoPeriodoGrafico(idCanvas), padding, alturaCabecalho + 38);
+
+  ctx.drawImage(canvasOriginal, (larguraFinal - canvasOriginal.width) / 2, alturaCabecalho + 46);
+
+  const agora = new Date();
+  const dataExportacao = agora.toLocaleDateString("pt-BR") + " às " + agora.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  ctx.strokeStyle = "#dddddd";
+  ctx.beginPath();
+  ctx.moveTo(padding, alturaFinal - alturaRodape);
+  ctx.lineTo(larguraFinal - padding, alturaFinal - alturaRodape);
+  ctx.stroke();
+  ctx.fillStyle = "#999999";
+  ctx.font = "11px Arial";
+  ctx.textAlign = "center";
+  ctx.fillText("Sistema de Controle Disciplinar Discente — IFMT Campus Lucas do Rio Verde", larguraFinal / 2, alturaFinal - 34);
+  ctx.fillText("Exportado em " + dataExportacao, larguraFinal / 2, alturaFinal - 18);
+  ctx.textAlign = "left";
+
+  return canvasFinal;
+}
+
 async function copiarGraficoComoImagem(idCanvas, botaoEl) {
-  const canvasEl = el(idCanvas);
   const textoOriginal = botaoEl.textContent;
   try {
-    const blob = await new Promise((resolve) => canvasEl.toBlob(resolve, "image/png"));
+    const tituloGrafico = botaoEl.closest(".pei-card").querySelector(".pei-card-title").textContent;
+    const canvasFinal = await gerarImagemGraficoComMoldura(idCanvas, tituloGrafico);
+    const blob = await new Promise((resolve) => canvasFinal.toBlob(resolve, "image/png"));
     await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
     mostrarToast("Imagem do gráfico copiada. Você já pode colar em outro programa.", "sucesso");
     botaoEl.textContent = "Copiado!";
