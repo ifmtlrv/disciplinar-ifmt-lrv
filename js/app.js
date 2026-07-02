@@ -290,41 +290,48 @@ async function renderizarListaOcorrencias() {
   aplicarFiltroOcorrencias();
 }
 
+const QTD_OCORRENCIAS_RECENTES = 5;
+
 function aplicarFiltroOcorrencias() {
   const termo = el("busca-ocorrencias").value;
-  const filtradas = filtrarOcorrenciasPorTexto(cacheOcorrencias, termo)
+  const ordenadas = filtrarOcorrenciasPorTexto(cacheOcorrencias, termo)
     .slice()
     .sort((a, b) => (a.data_falta < b.data_falta ? 1 : -1));
 
+  const semBusca = !termo.trim();
+  const filtradas = semBusca ? ordenadas.slice(0, QTD_OCORRENCIAS_RECENTES) : ordenadas;
+
   el("ocorrencias-tbody").innerHTML = filtradas
-    .map((o) => {
-      const podeGerenciar = usuarioAtual.papel === "admin" || o.registrado_por === usuarioAtual.id;
-      const acoesGestao = podeGerenciar
-        ? `<button class="acao-btn acao-editar btn-editar-ocorrencia" data-id="${o.id}">Editar</button>
-           <button class="acao-btn acao-excluir btn-excluir-ocorrencia" data-id="${o.id}">Excluir</button>`
-        : "";
-      return `<tr>
+    .map(
+      (o) => `<tr>
         <td>${o.nome_discente}</td>
         <td class="muted">${o.curso}</td>
         <td>${formatarData(o.data_falta)}</td>
         <td>${o.inciso}</td>
         <td>${badge(o.nivel)}</td>
-        <td>
-          ${acoesGestao}
-          <button class="acao-btn acao-editar btn-gerar-notificacao" data-id="${o.id}">Notificação</button>
-        </td>
-      </tr>`;
-    })
+        <td><button class="acao-btn acao-editar btn-visualizar-ocorrencia" data-id="${o.id}"><i class="ti ti-eye"></i> Visualizar</button></td>
+      </tr>`
+    )
     .join("") || `<tr><td colspan="6" class="muted">Nenhuma ocorrência encontrada.</td></tr>`;
 
-  el("ocorrencias-tbody").querySelectorAll(".btn-editar-ocorrencia").forEach((btn) => {
-    btn.addEventListener("click", () => abrirModalEdicao(btn.dataset.id));
-  });
-  el("ocorrencias-tbody").querySelectorAll(".btn-excluir-ocorrencia").forEach((btn) => {
-    btn.addEventListener("click", () => confirmarExclusao(btn.dataset.id));
-  });
-  el("ocorrencias-tbody").querySelectorAll(".btn-gerar-notificacao").forEach((btn) => {
-    btn.addEventListener("click", () => abrirModalNotificacao(btn.dataset.id, cacheOcorrencias));
+  const avisoId = "ocorrencias-aviso-recentes";
+  let aviso = document.getElementById(avisoId);
+  if (semBusca && ordenadas.length > QTD_OCORRENCIAS_RECENTES) {
+    if (!aviso) {
+      aviso = document.createElement("p");
+      aviso.id = avisoId;
+      aviso.className = "muted";
+      aviso.style.cssText = "font-size:12.5px; text-align:center; margin:10px 0 0;";
+      el("ocorrencias-tbody").closest(".pei-card").appendChild(aviso);
+    }
+    aviso.textContent = `Mostrando as ${QTD_OCORRENCIAS_RECENTES} mais recentes de ${ordenadas.length} ocorrências — digite algo acima para buscar nas demais.`;
+    aviso.style.display = "block";
+  } else if (aviso) {
+    aviso.style.display = "none";
+  }
+
+  el("ocorrencias-tbody").querySelectorAll(".btn-visualizar-ocorrencia").forEach((btn) => {
+    btn.addEventListener("click", () => abrirModalVisualizar(btn.dataset.id, cacheOcorrencias));
   });
 }
 
@@ -1308,6 +1315,23 @@ function atualizarBadgeAdmin(qtdPendentes) {
   badgeEl.style.display = qtdPendentes > 0 ? "inline-flex" : "none";
 }
 
+function formatarUltimoAcesso(valor) {
+  if (!valor) {
+    return `<span class="ultimo-acesso ultimo-acesso-nunca"><i class="ti ti-clock-off"></i>Nunca acessou</span>`;
+  }
+  const data = new Date(valor);
+  const hoje = new Date();
+  const mesmoDia =
+    data.getFullYear() === hoje.getFullYear() &&
+    data.getMonth() === hoje.getMonth() &&
+    data.getDate() === hoje.getDate();
+  const hora = data.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  const texto = mesmoDia
+    ? `hoje às ${hora}`
+    : `${data.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })} às ${hora}`;
+  return `<span class="ultimo-acesso"><i class="ti ti-clock"></i>${texto}</span>`;
+}
+
 function cardUsuarioHtml(u) {
   return `<div class="card-usuario">
     <div class="topo-usuario">
@@ -1315,7 +1339,10 @@ function cardUsuarioHtml(u) {
         <p class="nome-usuario">${u.nome_completo}</p>
         <p class="email-usuario">${u.email}</p>
       </div>
-      <span class="papel-badge">${PAPEL_LABEL[u.papel] || u.papel}</span>
+      <div class="info-lateral-usuario">
+        <span class="papel-badge">${PAPEL_LABEL[u.papel] || u.papel}</span>
+        ${formatarUltimoAcesso(u.ultimo_acesso)}
+      </div>
     </div>
     <div class="acoes-usuario">
       <select class="select-papel-admin" data-userid="${u.id}">
@@ -1495,7 +1522,7 @@ function configurarModalVisualizar() {
     const ocorrenciaParaExcluir = ocorrenciaVisualizando;
     fecharModalVisualizar();
     const excluiu = await confirmarExclusao(ocorrenciaParaExcluir.id, ocorrenciaParaExcluir);
-    if (excluiu) renderizarPainelAluno(matricula);
+    if (excluiu && el("p-select") && el("p-select").value) await renderizarPainelAluno(matricula);
   });
 }
 
