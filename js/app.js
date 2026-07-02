@@ -1317,7 +1317,7 @@ function atualizarBadgeAdmin(qtdPendentes) {
 
 function formatarUltimoAcesso(valor) {
   if (!valor) {
-    return `<span class="ultimo-acesso ultimo-acesso-nunca"><i class="ti ti-clock-off"></i>Nunca acessou</span>`;
+    return `<span class="ultimo-acesso ultimo-acesso-nunca"><i class="ti ti-clock-off"></i>Último acesso: nunca acessou</span>`;
   }
   const data = new Date(valor);
   const hoje = new Date();
@@ -1329,7 +1329,7 @@ function formatarUltimoAcesso(valor) {
   const texto = mesmoDia
     ? `hoje às ${hora}`
     : `${data.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })} às ${hora}`;
-  return `<span class="ultimo-acesso"><i class="ti ti-clock"></i>${texto}</span>`;
+  return `<span class="ultimo-acesso"><i class="ti ti-clock"></i>Último acesso: ${texto}</span>`;
 }
 
 function cardUsuarioHtml(u) {
