@@ -4,9 +4,6 @@
   --verde3: #F0FDF4;
   --verde4: #BBF7D0;
   --azul-escuro: #0D1B2A;
-  --grafite: #2C2C2A;
-  --acento-barra: #BA7517;
-  --acento-barra-claro: #FCE3BB;
   --amber: #b45309;
   --amber-lt: #fff8e7;
   --bd: #e0e0e0;
@@ -49,7 +46,7 @@ body {
 
 /* ===== Barra superior escura ===== */
 .topbar {
-  background: var(--grafite);
+  background: var(--azul-escuro);
   padding: 0 31px;
   display: flex;
   align-items: center;
@@ -112,9 +109,9 @@ body {
 }
 .topbar button#btn-sair:hover { background: rgba(255,255,255,0.18); }
 
-/* ===== Breadcrumb (barra de acento) ===== */
+/* ===== Breadcrumb verde ===== */
 .breadcrumb {
-  background: var(--acento-barra);
+  background: var(--verde);
   padding: 12px 31px;
   display: flex;
   align-items: center;
@@ -124,7 +121,7 @@ body {
   color: rgba(255,255,255,0.75);
 }
 
-.breadcrumb .atual { color: var(--acento-barra-claro); font-weight: 600; }
+.breadcrumb .atual { color: var(--verde4); font-weight: 600; }
 .breadcrumb .sep { color: rgba(255,255,255,0.4); }
 
 .container {
@@ -159,7 +156,7 @@ body {
 }
 
 .logo-login-wrap {
-  background: var(--grafite);
+  background: var(--azul-escuro);
   border-radius: var(--raio);
   padding: 18px 26px;
   display: flex;
@@ -285,7 +282,7 @@ button:hover { background: var(--fundo); }
   display: flex;
   overflow-x: auto;
   gap: 2px;
-  background: var(--acento-barra);
+  background: var(--verde);
   padding: 0 23px;
   margin-bottom: 1.5rem;
   border-radius: 0;
@@ -341,7 +338,7 @@ button:hover { background: var(--fundo); }
   display: flex;
   overflow-x: auto;
   gap: 2px;
-  background: var(--acento-barra);
+  background: var(--verde);
   padding: 0 23px;
   margin-bottom: 1.5rem;
 }
