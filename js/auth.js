@@ -4,6 +4,56 @@
 
 let usuarioAtual = null; // { id, email, nome_completo, papel, curso_responsavel }
 
+// ------------------------------------------------------------
+// Controle de sessão por inatividade
+// (o plano Free do Supabase não permite configurar isso pelo
+// painel, então fazemos o controle aqui no próprio app)
+// ------------------------------------------------------------
+const INATIVIDADE_LIMITE_MS = 24 * 60 * 60 * 1000; // 24 horas
+const CHAVE_ULTIMA_ATIVIDADE = "scdd_ultima_atividade";
+let timerInatividade = null;
+
+function registrarAtividade() {
+  localStorage.setItem(CHAVE_ULTIMA_ATIVIDADE, String(Date.now()));
+}
+
+function tempoDesdeUltimaAtividade() {
+  const registrado = Number(localStorage.getItem(CHAVE_ULTIMA_ATIVIDADE));
+  if (!registrado) return 0;
+  return Date.now() - registrado;
+}
+
+async function encerrarPorInatividade() {
+  pararMonitorInatividade();
+  localStorage.removeItem(CHAVE_ULTIMA_ATIVIDADE);
+  await supabaseClient.auth.signOut();
+  usuarioAtual = null;
+  alert("Sua sessão expirou por inatividade. Faça login novamente.");
+  location.reload();
+}
+
+function iniciarMonitorInatividade() {
+  registrarAtividade();
+
+  ["click", "keydown", "mousemove", "scroll", "touchstart"].forEach((evento) => {
+    document.addEventListener(evento, registrarAtividade, { passive: true });
+  });
+
+  if (timerInatividade) clearInterval(timerInatividade);
+  timerInatividade = setInterval(() => {
+    if (tempoDesdeUltimaAtividade() >= INATIVIDADE_LIMITE_MS) {
+      encerrarPorInatividade();
+    }
+  }, 60 * 1000); // verifica a cada 1 minuto
+}
+
+function pararMonitorInatividade() {
+  if (timerInatividade) {
+    clearInterval(timerInatividade);
+    timerInatividade = null;
+  }
+}
+
 async function cadastrar(email, senha, nomeCompleto) {
   const { data, error } = await supabaseClient.auth.signUp({
     email,
@@ -22,6 +72,8 @@ async function entrar(email, senha) {
 }
 
 async function sair() {
+  pararMonitorInatividade();
+  localStorage.removeItem(CHAVE_ULTIMA_ATIVIDADE);
   await supabaseClient.auth.signOut();
   usuarioAtual = null;
   location.reload();
@@ -30,6 +82,14 @@ async function sair() {
 async function carregarPerfilAtual() {
   const { data: sessao } = await supabaseClient.auth.getSession();
   if (!sessao.session) return null;
+
+  // Se já passou do limite de inatividade desde a última vez que o
+  // sistema foi usado neste navegador, encerra a sessão antes de
+  // carregar qualquer dado.
+  if (tempoDesdeUltimaAtividade() >= INATIVIDADE_LIMITE_MS && localStorage.getItem(CHAVE_ULTIMA_ATIVIDADE)) {
+    await encerrarPorInatividade();
+    return null;
+  }
 
   const userId = sessao.session.user.id;
   const { data: perfil, error } = await supabaseClient
@@ -44,6 +104,7 @@ async function carregarPerfilAtual() {
   }
 
   usuarioAtual = perfil;
+  iniciarMonitorInatividade();
   return perfil;
 }
 
