@@ -1,0 +1,16 @@
+name: Manter Supabase ativo
+
+on:
+  schedule:
+    - cron: "0 15 * * 1,4"   # segundas e quintas, 11h no horário de Cuiabá
+  workflow_dispatch:          # permite rodar manualmente para testar
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Consultar a API do Supabase
+        run: |
+          curl --fail --silent --show-error \
+            -H "apikey: sb_publishable_o2SDIVJjcr6C_Y12oKaYHg_1WFAy98Y" \
+            "https://forzhqpvvrrqppeekmcp.supabase.co/rest/v1/perfis?select=id&limit=1"
