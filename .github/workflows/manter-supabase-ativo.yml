@@ -2,8 +2,8 @@ name: Manter Supabase ativo
 
 on:
   schedule:
-    - cron: "0 15 * * 1,4"   # segundas e quintas, 11h no horário de Cuiabá
-  workflow_dispatch:          # permite rodar manualmente para testar
+    - cron: "0 11,17,23 * * *"   # 3 vezes por dia (7h, 13h e 19h em Cuiabá)
+  workflow_dispatch:              # permite rodar manualmente para testar
 
 jobs:
   ping:
